@@ -184,29 +184,234 @@ REFRESH_TOKEN_EXPIRY = 90  # days
 - Enable **monitoring and alerts**
 - Perform **regular backups**
 
-## 🤝 Contributing
-
-Contributions are welcome! To contribute:
-
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-Please follow PEP 8 style guidelines and include tests for new features.
-
 ## 📋 Roadmap
 
-- [ ] Complete REST API (auth, messaging routes)
-- [ ] API documentation (Swagger/OpenAPI)
-- [ ] Reference client implementation
-- [ ] WebSocket support for real-time messaging
-- [ ] Push notifications
-- [ ] Multi-device support
-- [ ] Admin dashboard
-- [ ] Group messaging
-- [ ] E2E encrypted audio/video calls
+### Phase 0 - Self-Hosting Ready (v0.1) 🐳
+**Goal:** Déploiement serveur en 2 minutes
+
+- [ ] Create `requirements.txt` with all dependencies
+- [ ] Create `Dockerfile` (Python + Flask + MySQL client)
+- [ ] Create `docker-compose.yml` (Flask + MySQL + Redis)
+- [ ] Create `.env.example` template
+- [ ] Database initialization script (auto-create tables)
+- [ ] Quick start documentation (3 commands max)
+- [ ] Fix security issue on `/` route (remove password exposure)
+
+### Phase 1 - Server Gateway (v0.2) 🔐
+**Goal:** Serveur passerelle fonctionnel avec auto-destruction
+
+#### 1.1 - Database Models ✅ (Already done)
+- [x] User model with Argon2 hashing
+- [x] Role model (RBAC)
+- [x] Message model (encrypted binary content)
+- [x] Token model (JWT with device tracking)
+- [x] Log model (audit trail)
+
+#### 1.2 - Authentication System
+**Dependencies:** `pip install Flask-JWT-Extended PyJWT`
+
+- [ ] Install Flask-JWT-Extended
+- [ ] POST `/auth/register` - User registration (hash password with Argon2)
+- [ ] POST `/auth/login` - Login with dual JWT:
+  - Access token (10 min) - for API calls
+  - Refresh token (90 days) - stored hashed in Token table
+  - Return both tokens + device_id
+- [ ] POST `/auth/refresh` - Exchange refresh token for new access token
+- [ ] POST `/auth/logout` - Mark token as revoked in database
+- [ ] Create `@token_required` decorator - JWT validation middleware
+  - Verify token signature
+  - Check token not expired
+  - Check token not revoked in database
+
+**Testing:** Use curl/Postman to register → login → call protected route
+
+#### 1.3 - Messaging Gateway API
+**Prerequisites:** Authentication must work (need @token_required)
+
+- [ ] POST `/messages/send` - Store encrypted message
+  - Protected with `@token_required`
+  - Accept `Content` as base64-encoded encrypted bytes
+  - Store as LargeBinary in database
+  - Return message_id
+- [ ] GET `/messages/pending` - Retrieve pending messages
+  - Protected with `@token_required`
+  - Return only messages where `Id_user_receiver = current_user.id`
+  - Return encrypted content as base64
+- [ ] POST `/messages/ack/:id` - Mark as delivered → **REAL DELETE**
+  - Protected with `@token_required`
+  - Verify current_user is the receiver
+  - **CRITICAL:** `db.session.delete(message)` (not just flag!)
+  - Log deletion in Log table (audit trail)
+- [ ] Background job: Auto-delete undelivered messages after 7 days
+  - Use APScheduler (simple) or Celery (production)
+  - Query messages where `Date < now() - 7 days AND Is_delivered = False`
+  - Delete from database
+
+**Testing:** Send message → retrieve → ack → verify it's deleted from DB
+
+#### 1.4 - User Management
+**Prerequisites:** Authentication must work
+
+- [ ] GET `/users/me` - Current user profile (protected route)
+- [ ] PATCH `/users/me` - Update profile (email, username)
+- [ ] GET `/users/search?q=username` - Find users by username (for contacts)
+  - Return id, username, email only (NOT password!)
+- [ ] DELETE `/users/me` - Account deletion
+  - Soft delete (set Is_activated = False) OR hard delete
+  - Revoke all user tokens
+  - Log action in audit trail
+
+#### 1.5 - Security Hardening
+- [ ] Install `Flask-Limiter` - Rate limiting
+  - 5 requests/minute on /auth/login (prevent brute force)
+  - 100 requests/hour on /messages/* (prevent spam)
+- [ ] Install `marshmallow` or `pydantic` - Input validation
+  - Validate all POST/PATCH request bodies
+  - Sanitize inputs (prevent injection)
+- [ ] Configure CORS (`Flask-CORS`)
+  - Allow only your client origins
+- [ ] Health check endpoint GET `/health`
+  - Returns: `{"status": "ok", "db": "connected", "timestamp": "..."}`
+  - Public (no auth required)
+
+### Phase 2 - Real-Time Messaging (v0.5) ⚡
+**Goal:** Messagerie instantanée temps réel
+
+**WebSocket Server (Socket.IO)**
+- [ ] Real-time message delivery (push to recipient)
+- [ ] Online/offline status
+- [ ] Typing indicators
+- [ ] Message delivery confirmations
+- [ ] Connection management (reconnect logic)
+
+**Presence System**
+- [ ] Last seen timestamp
+- [ ] Online indicator
+- [ ] Redis for presence caching
+
+**Push Notifications (optional)**
+- [ ] FCM/APNS integration for mobile
+- [ ] Silent push for wake-up (encrypted payload)
+
+### Phase 3 - Reference Client (v1.0) 📱
+**Goal:** Client de référence avec stockage local chiffré
+
+**Python CLI Client (Reference Implementation)**
+- [ ] E2E encryption implementation (Signal Protocol or libsodium)
+- [ ] Local SQLite database (encrypted with SQLCipher)
+- [ ] Key exchange (Diffie-Hellman or pre-keys)
+- [ ] Send/receive messages
+- [ ] WebSocket connection handler
+- [ ] Auto-sync on reconnect
+
+**Client Features**
+- [ ] Contact management
+- [ ] Message history (local only)
+- [ ] Search in local messages
+- [ ] Export/import encrypted backup
+- [ ] Multi-device key sync
+
+**Documentation**
+- [ ] Client SDK documentation
+- [ ] E2E encryption protocol specification
+- [ ] API usage examples
+
+### Phase 4 - Group Messaging (v1.5) 👥
+**Goal:** Conversations de groupe chiffrées
+
+**Group Models & API**
+- [ ] Group creation/deletion
+- [ ] Add/remove members
+- [ ] Admin/member roles
+- [ ] Group metadata encryption
+
+**Group E2E Encryption**
+- [ ] Sender keys protocol (Signal groups style)
+- [ ] Key rotation on member changes
+- [ ] Server-side group message relay (still encrypted)
+
+**Client Updates**
+- [ ] Group UI in reference client
+- [ ] Group key management
+- [ ] Member list sync
+
+### Phase 5 - Advanced Features (v2.0+) ✨
+
+**Multi-Device Support**
+- [ ] Device management UI
+- [ ] Cross-device message sync (encrypted)
+- [ ] QR code pairing (like WhatsApp Web)
+
+**Rich Messaging**
+- [ ] E2E encrypted file sharing (images, videos, docs)
+- [ ] Voice messages (encrypted audio files)
+- [ ] Message reactions & read receipts
+- [ ] Message editing & deletion
+
+**Admin Dashboard**
+- [ ] Server metrics (users, messages/day, storage)
+- [ ] User management (ban/suspend)
+- [ ] Audit logs viewer
+- [ ] Zero-knowledge guarantee: no message content visible
+
+### Phase 6 - Cross-Platform GUI (v3.0+) 🚀
+**Goal:** Une app web transformée en app desktop & mobile
+
+> **Strategy:** Web-first approach - un seul codebase réutilisé partout
+
+#### 6.1 - Web Application (Foundation)
+- [ ] Choose framework (React, Vue, Svelte, or Vanilla JS)
+- [ ] Web UI for messaging (chat interface)
+- [ ] Authentication flow (login/register)
+- [ ] Contact list & search
+- [ ] Message encryption/decryption (client-side with libsodium.js)
+- [ ] Local encrypted storage (IndexedDB with encryption)
+- [ ] WebSocket connection for real-time messaging
+- [ ] PWA support (Progressive Web App)
+
+#### 6.2 - Desktop App with Electron
+**Prerequisites:** Web app must work
+
+- [ ] Electron wrapper configuration
+- [ ] Native system tray integration
+- [ ] Desktop notifications
+- [ ] Auto-start on boot (optional)
+- [ ] Auto-update mechanism
+- [ ] Build scripts for Windows/Mac/Linux
+- [ ] Code signing (for distribution)
+
+#### 6.3 - Android App (Web-to-Mobile)
+**Choose ONE approach:**
+
+**Option A: Capacitor** (recommended - easier)
+- [ ] Wrap web app with Capacitor
+- [ ] Android native plugins (notifications, storage)
+- [ ] APK build configuration
+- [ ] Google Play Store preparation
+
+**Option B: React Native** (if using React)
+- [ ] Port web components to React Native
+- [ ] Native Android modules
+- [ ] Play Store deployment
+
+**Common tasks:**
+- [ ] Push notification integration (FCM)
+- [ ] Contact book integration
+- [ ] Background service for message sync
+- [ ] App signing & distribution
+
+#### 6.4 - Voice & Video Calls (Optional)
+- [ ] WebRTC signaling server
+- [ ] E2E encrypted voice calls (P2P)
+- [ ] E2E encrypted video calls (P2P)
+- [ ] Screen sharing (desktop only)
+
+### Phase 7 - Federation (Future Vision) 🌐
+
+- [ ] Server-to-server federation (like Matrix/XMPP)
+- [ ] Cross-server messaging
+- [ ] Distributed architecture
+- [ ] ActivityPub integration (optional)
 
 ## 📄 License
 
