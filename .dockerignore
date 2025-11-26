@@ -9,17 +9,25 @@ env/
 ENV/
 .venv
 
-# Environment
-.env
-.env.local
-
 # IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.claude
+
+# Environment files
+.env
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
 
 # Logs
 logs/
@@ -30,22 +38,10 @@ logs/
 *.sqlite
 *.sqlite3
 
-# Docker volumes
-mysql_data/
-redis_data/
-
 # OS
 .DS_Store
 Thumbs.db
-.directory
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-*.cover
-
-# Distribution
-dist/
-build/
-*.egg-info/
+# Documentation
+README.md
+docs/

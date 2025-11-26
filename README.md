@@ -10,20 +10,26 @@
 
 ### Docker Installation (Recommended)
 
+**Deploy your own Ygam server in 3 commands:**
+
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/ygam.git
-cd ygam
+# 1. Clone and navigate
+git clone https://github.com/your-username/ygam.git && cd ygam
 
-# Configure environment variables
-cp .env.example .env
-# Edit .env with your configuration
+# 2. Configure environment (edit SECRET_KEY and passwords)
+cp .env.exemple .env && nano .env
 
-# Launch with Docker Compose
+# 3. Launch all services (Flask + MySQL + Redis)
 docker-compose up -d
 ```
 
-Your API will be available at `http://localhost:5000`
+**Your API is now running at `http://localhost:5000`**
+
+Check health: `curl http://localhost:5000/health`
+
+View logs: `docker-compose logs -f web`
+
+Stop services: `docker-compose down`
 
 ### Manual Installation
 
@@ -38,7 +44,7 @@ source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 
 # Configure environment
-cp .env.example .env
+cp .env.exemple .env
 # Edit .env with your database credentials
 
 # Initialize database
@@ -186,16 +192,16 @@ REFRESH_TOKEN_EXPIRY = 90  # days
 
 ## 📋 Roadmap
 
-### Phase 0 - Self-Hosting Ready (v0.1) 🐳
+### Phase 0 - Self-Hosting Ready (v0.1) 🐳 ✅ COMPLETED
 **Goal:** Déploiement serveur en 2 minutes
 
-- [ ] Create `requirements.txt` with all dependencies
-- [ ] Create `Dockerfile` (Python + Flask + MySQL client)
-- [ ] Create `docker-compose.yml` (Flask + MySQL + Redis)
-- [ ] Create `.env.example` template
-- [ ] Database initialization script (auto-create tables)
-- [ ] Quick start documentation (3 commands max)
-- [ ] Fix security issue on `/` route (remove password exposure)
+- [X] Create `requirements.txt` with all dependencies
+- [X] Create `Dockerfile` (Python + Flask + MySQL client)
+- [X] Create `docker-compose.yml` (Flask + MySQL + Redis)
+- [X] Create `.env.exemple` template
+- [X] Database initialization script (auto-create tables)
+- [X] Quick start documentation (3 commands max)
+- [X] Fix security issue on `/` route (remove password exposure)
 
 ### Phase 1 - Server Gateway (v0.2) 🔐
 **Goal:** Serveur passerelle fonctionnel avec auto-destruction
@@ -210,7 +216,7 @@ REFRESH_TOKEN_EXPIRY = 90  # days
 #### 1.2 - Authentication System
 **Dependencies:** `pip install Flask-JWT-Extended PyJWT`
 
-- [ ] Install Flask-JWT-Extended
+- [X] Install Flask-JWT-Extended
 - [ ] POST `/auth/register` - User registration (hash password with Argon2)
 - [ ] POST `/auth/login` - Login with dual JWT:
   - Access token (10 min) - for API calls

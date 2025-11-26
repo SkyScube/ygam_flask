@@ -12,7 +12,9 @@ def create_app(config_class=Config):
 
     # Enregistrer les blueprints
     from routes.main import main_bp
+    from routes.auth import auth_bp
     app.register_blueprint(main_bp)
+    app.register_blueprint(auth_bp)
 
     # Créer les tables
     with app.app_context():
