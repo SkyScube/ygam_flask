@@ -155,11 +155,6 @@
                 isValid = false;
             }
 
-            if (!document.getElementById('terms').checked) {
-                showAlert('Veuillez accepter les conditions d\'utilisation', 'error');
-                isValid = false;
-            }
-
             if (!isValid) return;
 
             // Envoi du formulaire
@@ -183,7 +178,7 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    showAlert('Compte créé avec succès ! Redirection...', 'success');
+                    showAlert(data.message || 'Compte créé avec succès ! Redirection...', 'success');
                     setTimeout(() => {
                         window.location.href = '/auth/login';
                     }, 1500);

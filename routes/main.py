@@ -1,18 +1,22 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
+from decorator import jwt_required
 from models import *
-from utils import generate_cuid
 
 main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')
+@jwt_required
 def index():
     """
     Welcome endpoint - Returns API information
     """
+    print(request.current_user)
     return jsonify({
         'message': 'Welcome to Ygam API',
         'version': '0.1.0',
         'status': 'running',
+        'username': request.current_user.Username,
+        'email': request.current_user.Email,
         'endpoints': {
             'health': '/health',
             'docs': 'https://github.com/your-username/ygam'

@@ -18,12 +18,12 @@
                 <div class="form-group">
                     <label for="identifier">Nom d'utilisateur ou email</label>
                     <input
-                        type="text"
+                        type="email"
                         id="identifier"
                         name="identifier"
                         required
-                        placeholder="Votre nom d'utilisateur ou email"
-                        autocomplete="username"
+                        placeholder="Email"
+                        autocomplete="email"
                     >
                     <span class="error-message" id="identifier-error"></span>
                 </div>
@@ -140,7 +140,7 @@
 
                     showAlert('Connexion réussie ! Redirection...', 'success');
                     setTimeout(() => {
-                        window.location.href = '/dashboard';
+                        window.location.href = '/';
                     }, 1000);
                 } else {
                     showAlert(data.message || 'Identifiants incorrects', 'error');

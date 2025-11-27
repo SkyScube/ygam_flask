@@ -1,7 +1,23 @@
 import secrets
 import string
+from argon2.exceptions import VerifyMismatchError
+from models import *
 
 def generate_cuid():
     """Génère un ID unique similaire à cuid de Prisma"""
     # Version simplifiée - tu peux utiliser la lib 'cuid' si tu veux
     return 'c' + ''.join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(24))
+
+def get_user_by_email(email: str):
+    return db.session.query(User).filter(User.Email == email).first()
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    try:
+        ph.verify(hashed, plain)
+        return True
+    except VerifyMismatchError:
+        return False
+
+def get_user_by_id(user_id: str):
+    return db.session.query(User).filter(User.id == user_id).first()
