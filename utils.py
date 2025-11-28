@@ -1,5 +1,6 @@
 import secrets
 import string
+import hashlib
 from argon2.exceptions import VerifyMismatchError
 from models import *
 
@@ -21,3 +22,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def get_user_by_id(user_id: str):
     return db.session.query(User).filter(User.id == user_id).first()
+
+def hash_token(token: str) -> str:
+    """Hash déterministe pour les tokens JWT (utilise SHA256 au lieu d'Argon2)"""
+    return hashlib.sha256(token.encode()).hexdigest()

@@ -3,10 +3,11 @@ import os
 import jwt
 from flask import request
 
+from app import app
 from models import ph, db
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 
-from utils import get_user_by_id
+from utils import get_user_by_id, hash_token
 
 
 @app.before_request
@@ -16,17 +17,23 @@ def authenticate_and_refresh():
     Refresh automatiquement si access token expiré
     NE BLOQUE PAS les routes publiques
     """
+    print(f"🔍 [MIDDLEWARE] Requête vers: {request.endpoint}")
 
     # Routes publiques
     if request.endpoint in ['auth.api_login', 'auth.api_register', 'static']:
+        print("✅ [MIDDLEWARE] Route publique, on laisse passer")
         return None
 
     access_token = request.cookies.get('access_token')
     refresh_token = request.cookies.get('refresh_token')
 
+    print(f"🍪 [MIDDLEWARE] access_token présent: {bool(access_token)}")
+    print(f"🍪 [MIDDLEWARE] refresh_token présent: {bool(refresh_token)}")
+
     # ✅ Pas de tokens → OK, on laisse passer
     # Le decorator @login_required bloquera si nécessaire
     if not access_token and not refresh_token:
+        print("⚠️ [MIDDLEWARE] Aucun token, on laisse passer")
         request.current_user = None
         return None
 
@@ -38,56 +45,80 @@ def authenticate_and_refresh():
             data = jwt.decode(access_token, os.getenv("JWT_SECRET"), algorithms=['HS256'])
             if data.get('type') == 'access':
                 user_id = data['user_id']
+                print(f"✅ [MIDDLEWARE] Access token valide, user_id: {user_id}")
         except jwt.ExpiredSignatureError:
+            print("⏰ [MIDDLEWARE] Access token EXPIRÉ, on va tenter le refresh")
             pass  # On va utiliser le refresh token
-        except jwt.InvalidTokenError:
+        except jwt.InvalidTokenError as e:
+            print(f"❌ [MIDDLEWARE] Access token invalide: {e}")
             request.current_user = None
             return None
 
     # ✅ Si access expiré, utiliser le refresh token
     if not user_id and refresh_token:
+        print("🔄 [MIDDLEWARE] Tentative de refresh...")
         try:
             refresh_data = jwt.decode(refresh_token, os.getenv("JWT_SECRET"), algorithms=['HS256'])
+            print(f"✅ [MIDDLEWARE] Refresh token décodé: user_id={refresh_data.get('user_id')}")
 
             if refresh_data.get('type') == 'refresh':
                 # Vérifier en BDD
                 from models import Token
 
-                token_hash = ph.hash(refresh_token)
+                token_hash = hash_token(refresh_token)
+                print(f"🔐 [MIDDLEWARE] Hash calculé: {token_hash}")
                 token_record = Token.query.filter_by(jwt_hash=token_hash).first()
 
-                if token_record and not token_record.is_revoked and token_record.expired_at > datetime.now(timezone.utc):
+                if token_record:
+                    print(f"✅ [MIDDLEWARE] Token trouvé en DB: id={token_record.id}, revoked={token_record.is_revoked}")
+                else:
+                    print("❌ [MIDDLEWARE] Token NOT FOUND en DB")
+
+                if token_record and not token_record.is_revoked and token_record.expired_at > datetime.utcnow():
                     user_id = refresh_data['user_id']
+                    print(f"🎉 [MIDDLEWARE] Token valide ! Génération nouveau access token...")
 
                     # ✅ Générer nouveau access token
                     new_access_token = jwt.encode({
                         'user_id': user_id,
-                        'exp': datetime.now(timezone.utc) + timedelta(minutes=10),
-                        'iat': datetime.now(timezone.utc),
+                        'exp': datetime.utcnow() + timedelta(minutes=10),
+                        'iat': datetime.utcnow(),
                         'type': 'access'
                     }, os.getenv("JWT_SECRET"), algorithm='HS256')
 
                     request._new_access_token = new_access_token
+                    print(f"✅ [MIDDLEWARE] Nouveau access token généré et stocké dans request._new_access_token")
 
                     # Mettre à jour last_used
-                    token_record.last_used = datetime.now(timezone.utc)
+                    token_record.last_used = datetime.utcnow()
                     db.session.commit()
-        except:
+                    print("✅ [MIDDLEWARE] last_used mis à jour en DB")
+                else:
+                    print("❌ [MIDDLEWARE] Token invalide ou révoqué ou expiré")
+        except Exception as e:
+            print(f"❌ [MIDDLEWARE] Erreur lors du refresh: {e}")
             pass
 
     # ✅ Charger l'utilisateur si on a un user_id
     if user_id:
         request.current_user = get_user_by_id(user_id)
+        print(f"✅ [MIDDLEWARE] Utilisateur chargé: {request.current_user.Username if request.current_user else 'None'}")
     else:
         request.current_user = None
+        print("⚠️ [MIDDLEWARE] Aucun user_id, current_user = None")
 
     return None
 
 
 @app.after_request
 def inject_new_access_token(response):
+    print(f"🔄 [AFTER_REQUEST] Vérification de request._new_access_token...")
     if hasattr(request, '_new_access_token'):
+        print(f"🎉 [AFTER_REQUEST] Nouveau access token trouvé ! Injection dans les cookies...")
         is_production = os.getenv('FLASK_ENV') == 'production'
         response.set_cookie('access_token', request._new_access_token, httponly=True, secure=is_production,
                             samesite='Strict', max_age=15 * 60)
+        print(f"✅ [AFTER_REQUEST] Cookie access_token mis à jour dans la réponse")
+    else:
+        print(f"⚠️ [AFTER_REQUEST] Pas de nouveau access token à injecter")
     return response

@@ -81,7 +81,7 @@ class Token(db.Model):
     __tablename__ = 'Token'
 
     id = db.Column(db.String(191), primary_key=True)
-    jwt_hash = db.Column(db.String(64), unique=True, nullable=False)
+    jwt_hash = db.Column(db.String(256), unique=True, nullable=False)
     id_user = db.Column(db.String(191), db.ForeignKey('User.id'), nullable=False)
     expired_at = db.Column(db.DateTime, nullable=False)
     is_revoked = db.Column(db.Boolean, default=False, nullable=False)
@@ -110,8 +110,8 @@ class Log(db.Model):
     action = db.Column(db.String(16), nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     target_table = db.Column(db.String(32), nullable=False)
-    target_id = db.Column(db.String(32), nullable=False)
-    actor_user_id = db.Column(db.String(32), nullable=False)
+    target_id = db.Column(db.String(191), nullable=False)
+    actor_user_id = db.Column(db.String(191), nullable=False)
     userId = db.Column(db.String(191), nullable=True)
 
     # Index multiples

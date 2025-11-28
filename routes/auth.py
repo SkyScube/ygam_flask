@@ -1,11 +1,11 @@
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 import os
 
 import jwt
 from flask import Blueprint, render_template, request, jsonify, make_response
 from models import *
-from utils import generate_cuid, get_user_by_email, verify_password
+from utils import generate_cuid, get_user_by_email, verify_password, hash_token
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -64,8 +64,8 @@ def api_login():
 
     access_payload = {
         'user_id': user.id,
-        'exp': datetime.now(timezone.utc) + timedelta(minutes=10),
-        'iat': datetime.now(timezone.utc),
+        'exp': datetime.utcnow() + timedelta(minutes=10),
+        'iat': datetime.utcnow(),
         'type': 'access'
     }
     access_token = jwt.encode(access_payload, os.getenv("JWT_SECRET"), algorithm='HS256')
@@ -75,19 +75,19 @@ def api_login():
     refresh_payload = {
         'user_id': user.id,
         'device_id': device_id,
-        'exp': datetime.now(timezone.utc) + timedelta(days=90),
-        'iat': datetime.now(timezone.utc),
+        'exp': datetime.utcnow() + timedelta(days=90),
+        'iat': datetime.utcnow(),
         'type': 'refresh'
     }
     refresh_token = jwt.encode(refresh_payload, os.getenv("JWT_SECRET"), algorithm='HS256')
 
     token_record = Token(
         id=str(uuid.uuid4()),
-        jwt_hash=ph.hash(refresh_token),
+        jwt_hash=hash_token(refresh_token),
         id_user=user.id,
         device_id=device_id,
         device_name=request.get_data(),
-        expired_at=datetime.now(timezone.utc) + timedelta(days=90),
+        expired_at=datetime.utcnow() + timedelta(days=90),
     )
     db.session.add(token_record)
     db.session.commit()
@@ -125,7 +125,7 @@ def refresh():
         device_id = data['device_id']  # ✅ Récupéré depuis le JWT
 
         # ✅ Vérifier en BDD
-        token_hash = ph.hash(refresh_token_value)
+        token_hash = hash_token(refresh_token_value)
         token_record = Token.query.filter_by(jwt_hash=token_hash).first()
 
         if not token_record:
@@ -134,18 +134,18 @@ def refresh():
         if token_record.is_revoked:
             return jsonify({'message': 'Token révoqué'}), 401
 
-        if token_record.expired_at < datetime.now(timezone.utc):
+        if token_record.expired_at < datetime.utcnow():
             return jsonify({'message': 'Token expiré'}), 401
 
         # ✅ Mettre à jour last_used
-        token_record.last_used = datetime.now(timezone.utc)
+        token_record.last_used = datetime.utcnow()
         db.session.commit()
 
         # ✅ Créer un nouveau access token
         access_payload = {
             'user_id': user_id,
-            'exp': datetime.now(timezone.utc) + timedelta(minutes=15),
-            'iat': datetime.now(timezone.utc),
+            'exp': datetime.utcnow() + timedelta(minutes=15),
+            'iat': datetime.utcnow(),
             'type': 'access'
         }
         new_access_token = jwt.encode(access_payload, os.getenv("JWT_SECRET"), algorithm='HS256')
