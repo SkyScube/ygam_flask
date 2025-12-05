@@ -1,8 +1,12 @@
 # Ygam - E2E Encrypted Instant Messaging Server
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
 ![Flask](https://img.shields.io/badge/flask-3.1.2-green.svg)
+![Tests](https://github.com/your-username/ygam/actions/workflows/tests.yml/badge.svg)
+![Coverage](https://img.shields.io/codecov/c/github/your-username/ygam)
+![CodeQL](https://github.com/your-username/ygam/actions/workflows/codeql.yml/badge.svg)
+![Docker](https://github.com/your-username/ygam/actions/workflows/docker-build.yml/badge.svg)
 
 **Ygam** is a privacy-focused open source instant messaging server. The server acts solely as a gateway: all messages are end-to-end encrypted and **automatically deleted** once delivered. Host your own zero-knowledge messaging infrastructure.
 
@@ -365,6 +369,90 @@ Innovative authentication with two tokens:
 - [ ] Cross-server messaging
 - [ ] Distributed architecture
 - [ ] ActivityPub integration (optional)
+
+## 🧪 Testing & CI/CD
+
+### Running Tests Locally
+
+The project includes a comprehensive test suite with 130+ tests covering:
+- Authentication & authorization
+- JWT token management
+- Database models & relationships
+- Middleware & security
+- API routes & endpoints
+
+**Quick start:**
+```bash
+# Install test dependencies
+pip install -r requirements-test.txt
+
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=. --cov-report=html
+
+# Or use the convenience script
+./run_tests.sh
+./run_tests.sh coverage
+```
+
+See `tests/README.md` for detailed testing documentation.
+
+### Continuous Integration
+
+The project uses GitHub Actions for automated testing and quality checks:
+
+#### 🔄 **Tests Workflow** (`.github/workflows/tests.yml`)
+Runs on every push and pull request:
+- **Multi-Python Testing**: Tests on Python 3.10, 3.11, and 3.12
+- **Code Coverage**: Generates coverage reports (85-90% coverage)
+- **Code Quality**: Black, isort, and flake8 linting
+- **Security Scan**: Safety and Bandit security checks
+
+#### 🔒 **CodeQL Analysis** (`.github/workflows/codeql.yml`)
+Security scanning for vulnerabilities:
+- Runs on push, PR, and weekly schedule
+- Analyzes Python and JavaScript code
+- Integrates with GitHub Security tab
+
+#### 🐳 **Docker Build** (`.github/workflows/docker-build.yml`)
+Automated Docker image building:
+- Builds on push to main/master
+- Pushes to Docker Hub (requires secrets)
+- Vulnerability scanning with Trivy
+
+### CI/CD Status
+
+All workflows must pass before merging pull requests:
+- ✅ Tests on Python 3.10, 3.11, 3.12
+- ✅ Code coverage > 80%
+- ✅ Security scans pass
+- ✅ Code quality checks pass
+
+### Setting Up CI/CD
+
+1. **Update badge URLs** in README.md:
+   - Replace `your-username` with your GitHub username
+   - Replace `ygam` with your repository name
+
+2. **Optional: Codecov integration**:
+   - Sign up at [codecov.io](https://codecov.io)
+   - Add repository
+   - No token needed for public repos
+
+3. **Optional: Docker Hub**:
+   - Add secrets to GitHub repository:
+     - `DOCKER_USERNAME`: Your Docker Hub username
+     - `DOCKER_PASSWORD`: Docker Hub access token
+
+4. **Branch protection** (recommended):
+   ```
+   Settings → Branches → Add rule
+   ✓ Require status checks to pass
+   ✓ Require branches to be up to date
+   Select: test, coverage, lint, security
+   ```
 
 ## 📄 License
 

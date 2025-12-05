@@ -42,8 +42,17 @@ Thumbs.db
 # Testing
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
 *.cover
+.tox/
+.nox/
+coverage.xml
+*.coveragerc
+test-results/
+.pytest_cache/
+junit.xml
+nosetests.xml
 
 # Distribution
 dist/
