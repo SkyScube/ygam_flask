@@ -41,7 +41,7 @@ jobs:
     - name: Run tests with pytest
       env:
         FLASK_ENV: testing
-        DATABASE_URL: sqlite:///:memory:
+        DATABASE_URL: "sqlite:///:memory:"
         JWT_SECRET: test_secret_key_for_testing_only_32chars_long_enough
       run: |
         pytest -v --tb=short
@@ -79,7 +79,7 @@ jobs:
     - name: Run tests with coverage
       env:
         FLASK_ENV: testing
-        DATABASE_URL: sqlite:///:memory:
+        DATABASE_URL: "sqlite:///:memory:"
         JWT_SECRET: test_secret_key_for_testing_only_32chars_long_enough
       run: |
         pytest --cov=. --cov-report=xml --cov-report=html --cov-report=term
