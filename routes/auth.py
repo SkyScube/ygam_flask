@@ -28,7 +28,7 @@ def api_register():
             id=generate_cuid(),
             Username=username,
             Email=email,
-            Password=ph.hash(password), # Hash en argon2 du hash SHA256*1000 du client
+            Password=ph.hash(password), # Argon2 hash of SHA256*1000 client-side hash
             Is_verified=False,
             Is_activaded=True,
             Id_role=2,
@@ -39,7 +39,7 @@ def api_register():
 
         print(username, email, password)
         return jsonify({
-            'message': 'Compte créé avec succès'
+            'message': 'Account created successfully'
         }), 201
     except Exception as e:
         return jsonify({
@@ -55,12 +55,12 @@ def api_login():
     user = get_user_by_email(identifier)
     if not user:
         return jsonify({
-            'message': 'mail or password incorrect',
-        })
+            'message': 'Email or password incorrect',
+        }), 401
     if not verify_password(password, user.Password):
         return jsonify({
-            'message': 'mail or password incorrect',
-        })
+            'message': 'Email or password incorrect',
+        }), 401
 
     access_payload = {
         'user_id': user.id,
@@ -86,14 +86,14 @@ def api_login():
         jwt_hash=hash_token(refresh_token),
         id_user=user.id,
         device_id=device_id,
-        device_name=request.get_data(),
+        device_name=request.json.get('device_name') or request.headers.get('User-Agent', 'Unknown Device'),
         expired_at=datetime.utcnow() + timedelta(days=90),
     )
     db.session.add(token_record)
     db.session.commit()
 
     response = make_response(jsonify({
-        'message': 'Connexion réussie',
+        'message': 'Login successful',
         'user': {
             'id': user.id,
             'username': user.Username,
@@ -105,61 +105,33 @@ def api_login():
 
     return response
 
+@auth_bp.post('/api/auth/logout')
+def post_logout():
+    user = request.current_user
 
-# auth/routes.py
-@auth_bp.post('/api/auth/refresh')
-def refresh():
-    refresh_token_value = request.cookies.get('refresh_token')
+    if not user:
+        return jsonify({
+            'message': 'Not authenticated'
+        }), 401
 
-    if not refresh_token_value:
-        return jsonify({'message': 'Refresh token manquant'}), 401
+    refresh_token = request.cookies.get('refresh_token')
 
-    try:
-        # ✅ Décoder le refresh token
-        data = jwt.decode(refresh_token_value, os.getenv("JWT_SECRET"), algorithms=['HS256'])
+    if refresh_token:
+        try:
+            token_hash = hash_token(refresh_token)
+            token_record = Token.query.filter_by(jwt_hash=token_hash, id_user=user.id).first()
 
-        if data.get('type') != 'refresh':
-            return jsonify({'message': 'Type de token invalide'}), 401
+            if token_record:
+                token_record.is_revoked = True
+                db.session.commit()
+        except Exception as e:
+            print(f"Error revoking token: {e}")
 
-        user_id = data['user_id']
-        device_id = data['device_id']  # ✅ Récupéré depuis le JWT
+    response = make_response(jsonify({
+        'message': 'Logout successful'
+    }), 200)
 
-        # ✅ Vérifier en BDD
-        token_hash = hash_token(refresh_token_value)
-        token_record = Token.query.filter_by(jwt_hash=token_hash).first()
+    response.set_cookie('access_token', '', httponly=True, max_age=0)
+    response.set_cookie('refresh_token', '', httponly=True, max_age=0)
 
-        if not token_record:
-            return jsonify({'message': 'Token invalide'}), 401
-
-        if token_record.is_revoked:
-            return jsonify({'message': 'Token révoqué'}), 401
-
-        if token_record.expired_at < datetime.utcnow():
-            return jsonify({'message': 'Token expiré'}), 401
-
-        # ✅ Mettre à jour last_used
-        token_record.last_used = datetime.utcnow()
-        db.session.commit()
-
-        # ✅ Créer un nouveau access token
-        access_payload = {
-            'user_id': user_id,
-            'exp': datetime.utcnow() + timedelta(minutes=15),
-            'iat': datetime.utcnow(),
-            'type': 'access'
-        }
-        new_access_token = jwt.encode(access_payload, os.getenv("JWT_SECRET"), algorithm='HS256')
-
-        response = make_response(jsonify({'message': 'Token rafraîchi'}), 200)
-
-        is_production = os.getenv('FLASK_ENV') == 'production'
-
-        response.set_cookie('access_token', new_access_token, httponly=True, secure=is_production, samesite='Strict',
-                            max_age=15 * 60)
-
-        return response
-
-    except jwt.ExpiredSignatureError:
-        return jsonify({'message': 'Refresh token expiré'}), 401
-    except jwt.InvalidTokenError:
-        return jsonify({'message': 'Token invalide'}), 401
+    return response

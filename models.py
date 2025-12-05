@@ -18,23 +18,23 @@ class User(db.Model):
     Is_activaded = db.Column(db.Boolean, default=False, nullable=False)
     Last_conection = db.Column(db.DateTime, nullable=True)
 
-    # Foreign Key vers Role
+    # Foreign Key to Role
     Id_role = db.Column(db.String(191), db.ForeignKey('Role.id'), nullable=True)
 
-    # Relations
+    # Relationships
     role = db.relationship('Role', back_populates='users')
     sent_messages = db.relationship('Message',
                                     foreign_keys='Message.Id_user_sender',
                                     back_populates='sender',
                                     lazy='dynamic')
     received_messages = db.relationship('Message',
-                                        foreign_keys='Message.Id_user_recever',
+                                        foreign_keys='Message.Id_user_receiver',
                                         back_populates='receiver',
                                         lazy='dynamic')
     tokens = db.relationship('Token', back_populates='user', cascade='all, delete-orphan')
 
     def set_password(self, password):
-        """Hash le mot de passe avec Argon2"""
+        """Hash password with Argon2"""
         self.Password = ph.hash(password)
 
     def __repr__(self):
@@ -47,7 +47,7 @@ class Role(db.Model):
     id = db.Column(db.String(191), primary_key=True)
     Name = db.Column(db.Text, nullable=False)
 
-    # Relation inverse
+    # Inverse relationship
     users = db.relationship('User', back_populates='role')
 
     def __repr__(self):
@@ -59,18 +59,18 @@ class Message(db.Model):
 
     id = db.Column(db.String(191), primary_key=True)
     Id_user_sender = db.Column(db.String(191), db.ForeignKey('User.id'), nullable=False)
-    Id_user_recever = db.Column(db.String(191), db.ForeignKey('User.id'), nullable=False)
-    Content = db.Column(db.LargeBinary, nullable=False)  # LongBlob
-    Is_delivred = db.Column(db.Text, nullable=False)  # À remplacer par Boolean idéalement
+    Id_user_receiver = db.Column(db.String(191), db.ForeignKey('User.id'), nullable=False)
+    Content = db.Column(db.LargeBinary, nullable=False)  # LongBlob - E2E encrypted content
+    Is_delivered = db.Column(db.Boolean, default=False, nullable=False)
     Date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    # Relations
+    # Relationships
     sender = db.relationship('User', foreign_keys=[Id_user_sender], back_populates='sent_messages')
-    receiver = db.relationship('User', foreign_keys=[Id_user_recever], back_populates='received_messages')
+    receiver = db.relationship('User', foreign_keys=[Id_user_receiver], back_populates='received_messages')
 
-    # Index composite
+    # Composite index
     __table_args__ = (
-        Index('idx_receiver_date', 'Id_user_recever', 'Date'),
+        Index('idx_receiver_date', 'Id_user_receiver', 'Date'),
     )
 
     def __repr__(self):
@@ -91,10 +91,10 @@ class Token(db.Model):
     device_id = db.Column(db.String(191), unique=True, nullable=False)
     prev_hash = db.Column(db.String(64), nullable=True)
 
-    # Relation
+    # Relationship
     user = db.relationship('User', back_populates='tokens')
 
-    # Index composites
+    # Composite indexes
     __table_args__ = (
         Index('idx_user_expired', 'id_user', 'expired_at'),
     )
@@ -114,7 +114,7 @@ class Log(db.Model):
     actor_user_id = db.Column(db.String(191), nullable=False)
     userId = db.Column(db.String(191), nullable=True)
 
-    # Index multiples
+    # Multiple indexes
     __table_args__ = (
         Index('idx_date', 'date'),
         Index('idx_action_date', 'action', 'date'),

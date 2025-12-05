@@ -4,10 +4,30 @@ import jwt
 from flask import request
 
 from app import app
-from models import ph, db
+from models import ph, db, Token
 from datetime import datetime, timedelta
 
 from utils import get_user_by_id, hash_token
+
+
+def get_token_record(refresh_token):
+    """
+    Helper function to retrieve token record from database
+    Returns token_record or None if not found
+    """
+    if not refresh_token:
+        return None
+
+    token_hash = hash_token(refresh_token)
+    print(f"🔐 [HELPER] Hash calculated: {token_hash}")
+    token_record = Token.query.filter_by(jwt_hash=token_hash).first()
+
+    if token_record:
+        print(f"✅ [HELPER] Token found in DB: id={token_record.id}, revoked={token_record.is_revoked}")
+    else:
+        print("❌ [HELPER] Token NOT FOUND in DB")
+
+    return token_record
 
 
 @app.before_request
@@ -62,17 +82,8 @@ def authenticate_and_refresh():
             print(f"✅ [MIDDLEWARE] Refresh token décodé: user_id={refresh_data.get('user_id')}")
 
             if refresh_data.get('type') == 'refresh':
-                # Vérifier en BDD
-                from models import Token
-
-                token_hash = hash_token(refresh_token)
-                print(f"🔐 [MIDDLEWARE] Hash calculé: {token_hash}")
-                token_record = Token.query.filter_by(jwt_hash=token_hash).first()
-
-                if token_record:
-                    print(f"✅ [MIDDLEWARE] Token trouvé en DB: id={token_record.id}, revoked={token_record.is_revoked}")
-                else:
-                    print("❌ [MIDDLEWARE] Token NOT FOUND en DB")
+                # Verify in database
+                token_record = get_token_record(refresh_token)
 
                 if token_record and not token_record.is_revoked and token_record.expired_at > datetime.utcnow():
                     user_id = refresh_data['user_id']
@@ -99,8 +110,13 @@ def authenticate_and_refresh():
             print(f"❌ [MIDDLEWARE] Erreur lors du refresh: {e}")
             pass
 
-    # ✅ Charger l'utilisateur si on a un user_id
+    # ✅ Load user if we have a user_id
     if user_id:
+        token_record = get_token_record(refresh_token)
+
+        if not token_record:
+            return None
+
         request.current_user = get_user_by_id(user_id)
         print(f"✅ [MIDDLEWARE] Utilisateur chargé: {request.current_user.Username if request.current_user else 'None'}")
     else:

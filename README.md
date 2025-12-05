@@ -95,11 +95,8 @@ Innovative authentication with two tokens:
   - Users stay connected for 90 days
 
 ### 🛡️ Enhanced Security
-- **Hashed tokens**: JWTs stored hashed in database
 - **Instant revocation**: Account deactivation at any time
-- **Argon2 hashing**: State-of-the-art password hashing
 - **Device tracking**: Per-device session management
-- **Audit logs**: Complete action traceability
 
 ## 📖 Architecture
 
@@ -140,56 +137,6 @@ Innovative authentication with two tokens:
     | <------------------- |
 ```
 
-### Data Models
-
-- **User**: User accounts with Argon2 hashing
-- **Role**: RBAC system
-- **Message**: Encrypted messages (deleted after delivery)
-- **Token**: JWT management with revocation
-- **Log**: Complete audit trail
-
-## 🔧 Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SECRET_KEY` | Flask secret key | *(required)* |
-| `DB_HOST` | MySQL host | localhost |
-| `DB_PORT` | MySQL port | 3306 |
-| `DB_NAME` | Database name | ygam |
-| `DB_USER` | MySQL user | ygam_admin |
-| `DB_PASSWORD` | MySQL password | *(required)* |
-
-### JWT Customization
-
-Modify token lifetimes in `config.py`:
-```python
-ACCESS_TOKEN_EXPIRY = 10   # minutes
-REFRESH_TOKEN_EXPIRY = 90  # days
-```
-
-## 🛡️ Security
-
-### Implemented Best Practices
-
-✅ End-to-end encryption (E2E)
-✅ Argon2 password hashing
-✅ Hashed JWT storage
-✅ Short-lived access tokens (10 min)
-✅ Message auto-deletion
-✅ Complete audit logging
-✅ Input validation and sanitization
-
-### Production Deployment Recommendations
-
-- Use **HTTPS** in production (Let's Encrypt)
-- Configure a **firewall** (ufw, iptables)
-- Change **all default keys and passwords**
-- Use a **reverse proxy** (Nginx, Caddy)
-- Enable **monitoring and alerts**
-- Perform **regular backups**
-
 ## 📋 Roadmap
 
 ### Phase 0 - Self-Hosting Ready (v0.1) 🐳 ✅ COMPLETED
@@ -217,14 +164,14 @@ REFRESH_TOKEN_EXPIRY = 90  # days
 **Dependencies:** `pip install Flask-JWT-Extended PyJWT`
 
 - [X] Install Flask-JWT-Extended
-- [ ] POST `/auth/register` - User registration (hash password with Argon2)
-- [ ] POST `/auth/login` - Login with dual JWT:
+- [X] POST `/auth/register` - User registration (hash password with Argon2)
+- [X] POST `/auth/login` - Login with dual JWT:
   - Access token (10 min) - for API calls
   - Refresh token (90 days) - stored hashed in Token table
   - Return both tokens + device_id
-- [ ] POST `/auth/refresh` - Exchange refresh token for new access token
-- [ ] POST `/auth/logout` - Mark token as revoked in database
-- [ ] Create `@token_required` decorator - JWT validation middleware
+- [X] POST `/auth/refresh` - Exchange refresh token for new access token
+- [X] POST `/auth/logout` - Mark token as revoked in database
+- [X] Create `@jwt_required` decorator - JWT validation middleware
   - Verify token signature
   - Check token not expired
   - Check token not revoked in database
