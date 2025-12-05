@@ -28,7 +28,7 @@ class TestRegister:
         assert user is not None
         assert user.Username == 'newuser'
         assert user.Is_activaded is True
-        assert user.Id_role == 2
+        assert user.Id_role == '2'  # Id_role is a string in the model
 
     def test_register_duplicate_email(self, client, test_user):
         """Test registration with existing email"""
