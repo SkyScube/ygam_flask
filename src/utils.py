@@ -2,7 +2,7 @@ import secrets
 import string
 import hashlib
 from argon2.exceptions import VerifyMismatchError
-from models import *
+from src.models import *
 
 def generate_cuid():
     """Génère un ID unique similaire à cuid de Prisma"""

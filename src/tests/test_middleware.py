@@ -6,8 +6,8 @@ import pytest
 from datetime import datetime, timedelta
 import jwt
 import os
-from models import db, Token
-from utils import hash_token
+from src.models import db, Token
+from src.utils import hash_token
 
 
 class TestMiddlewareAuthentication:

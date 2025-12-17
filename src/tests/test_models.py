@@ -3,8 +3,8 @@ Tests for database models
 """
 import pytest
 from datetime import datetime, timedelta
-from models import db, User, Role, Message, Token, Log, ph
-from utils import generate_cuid
+from src.models import db, User, Role, Message, Token, Log, ph
+from src.utils import generate_cuid
 import uuid
 
 

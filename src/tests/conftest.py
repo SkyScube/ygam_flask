@@ -2,23 +2,37 @@
 Pytest configuration and shared fixtures
 """
 import os
+import sys
 import pytest
 from datetime import datetime, timedelta
 import jwt
+
+# Add parent directories to path BEFORE any local imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Set test environment before importing app
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['JWT_SECRET'] = 'test_secret_key_for_testing_only_32chars'
 os.environ['FLASK_ENV'] = 'testing'
 
-from app import app as flask_app
-from models import db, User, Role, Token, Message, Log
-from utils import generate_cuid
+# Now we can import local modules
+from src.models import db, User, Role, Token, Message, Log
+from src.utils import generate_cuid
 
 
 @pytest.fixture(scope='function')
 def app():
     """Create and configure a test Flask application instance."""
+    from src import create_app
+
+    # Override config before creating app
+    os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    os.environ['TESTING'] = 'True'
+
+    # Create app without tables (we'll create them manually for test isolation)
+    flask_app = create_app(create_tables=False)
+
     flask_app.config.update({
         'TESTING': True,
         'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
@@ -27,6 +41,12 @@ def app():
     })
 
     with flask_app.app_context():
+        # create_app() already calls db.create_all()
+        # But we drop first for clean state in tests
+        try:
+            db.drop_all()
+        except:
+            pass  # If tables don't exist yet
         db.create_all()
 
         # Create default roles

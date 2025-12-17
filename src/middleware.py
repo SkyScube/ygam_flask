@@ -1,13 +1,11 @@
 import os
 
 import jwt
-from flask import request
-
-from app import app
-from models import ph, db, Token
+from flask import request, current_app
+from src.models import db, Token
 from datetime import datetime, timedelta
 
-from utils import get_user_by_id, hash_token
+from src.utils import get_user_by_id, hash_token
 
 
 def get_token_record(refresh_token):
@@ -30,7 +28,6 @@ def get_token_record(refresh_token):
     return token_record
 
 
-@app.before_request
 def authenticate_and_refresh():
     """
     Charge l'utilisateur si tokens présents et valides
@@ -126,7 +123,6 @@ def authenticate_and_refresh():
     return None
 
 
-@app.after_request
 def inject_new_access_token(response):
     print(f"🔄 [AFTER_REQUEST] Vérification de request._new_access_token...")
     if hasattr(request, '_new_access_token'):
@@ -138,3 +134,9 @@ def inject_new_access_token(response):
     else:
         print(f"⚠️ [AFTER_REQUEST] Pas de nouveau access token à injecter")
     return response
+
+
+def register_middleware(app):
+    """Register middleware hooks with the Flask app."""
+    app.before_request(authenticate_and_refresh)
+    app.after_request(inject_new_access_token)

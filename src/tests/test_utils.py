@@ -2,8 +2,8 @@
 Tests for utility functions
 """
 import pytest
-from models import db, User, ph
-from utils import generate_cuid, get_user_by_email, verify_password, get_user_by_id, hash_token
+from src.models import db, User, ph
+from src.utils import generate_cuid, get_user_by_email, verify_password, get_user_by_id, hash_token
 import hashlib
 
 

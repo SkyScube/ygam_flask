@@ -58,3 +58,5 @@ nosetests.xml
 dist/
 build/
 *.egg-info/
+
+CLAUDE.md

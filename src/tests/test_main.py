@@ -3,7 +3,7 @@ Tests for main routes
 """
 import json
 import pytest
-from models import db
+from src.models import db
 
 
 class TestIndexRoute:

@@ -3,7 +3,7 @@ from functools import wraps
 
 import jwt
 from flask import request, jsonify, redirect, url_for
-from utils import get_user_by_id
+from src.utils import get_user_by_id
 
 
 def jwt_required(f):

@@ -4,8 +4,8 @@ import os
 
 import jwt
 from flask import Blueprint, render_template, request, jsonify, make_response
-from models import *
-from utils import generate_cuid, get_user_by_email, verify_password, hash_token
+from src.models import *
+from src.utils import generate_cuid, get_user_by_email, verify_password, hash_token
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -51,7 +51,6 @@ def api_login():
     identifier = request.json.get('identifier')
     password = request.json.get('password')
     remember = request.json.get('remember', False)
-    print(identifier, password, remember)
     user = get_user_by_email(identifier)
     if not user:
         return jsonify({

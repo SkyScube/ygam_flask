@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
-from decorator import jwt_required
-from models import *
+from src.decorator import jwt_required
+from src.models import *
 
 main_bp = Blueprint('main', __name__)
 

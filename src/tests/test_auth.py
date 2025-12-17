@@ -3,8 +3,8 @@ Tests for authentication routes
 """
 import json
 import pytest
-from models import db, User, Token
-from utils import hash_token
+from src.models import db, User, Token
+from src.utils import hash_token
 
 
 class TestRegister:
