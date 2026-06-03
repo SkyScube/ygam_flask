@@ -31,7 +31,7 @@ class User(db.Model):
     Email          = db.Column(db.String(191), unique=True, nullable=False)
     Password       = db.Column(db.String(128), nullable=False)
     Is_verified    = db.Column(db.Boolean, default=False, nullable=False)
-    Is_activaded   = db.Column(db.Boolean, default=False, nullable=False)
+    Is_activated   = db.Column(db.Boolean, default=False, nullable=False)
     Last_conection = db.Column(db.DateTime, nullable=True)
     Id_role        = db.Column(db.String(191), db.ForeignKey('Role.id'), nullable=True)
 

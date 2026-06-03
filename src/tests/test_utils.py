@@ -218,7 +218,7 @@ class TestUtilsIntegration:
             Email='integration@example.com',
             Password=ph.hash(password),
             Is_verified=True,
-            Is_activaded=True,
+            Is_activated=True,
             Id_role='role_user'
         )
         db.session.add(user)

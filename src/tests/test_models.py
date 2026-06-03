@@ -19,7 +19,7 @@ class TestUserModel:
             Email='test@example.com',
             Password=ph.hash('password'),
             Is_verified=False,
-            Is_activaded=True,
+            Is_activated=True,
             Id_role='role_user'
         )
         db.session.add(user)

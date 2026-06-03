@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SocketIO Test - Ygam</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        #messages {
+            border: 1px solid #ddd;
+            padding: 15px;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .message {
+            padding: 8px;
+            margin: 5px 0;
+            border-left: 3px solid #007bff;
+            background: white;
+        }
+        .message.received { border-left-color: #28a745; }
+        .message.sent { border-left-color: #ffc107; }
+        input {
+            padding: 10px;
+            width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 SocketIO Test</h1>
+        
+        <div id="status" class="status disconnected">
+            ❌ Disconnected
+        </div>
+
+        <div>
+            <button onclick="testAuthInit()">Test auth_init</button>
+            <button onclick="testMessage()">Test message</button>
+            <button onclick="clearMessages()">Clear</button>
+        </div>
+
+        <div style="margin: 15px 0;">
+            <input type="text" id="customMessage" placeholder="Custom message">
+            <button onclick="sendCustomMessage()">Send</button>
+        </div>
+
+        <h3>Messages:</h3>
+        <div id="messages"></div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const statusDiv = document.getElementById('status');
+        const messagesDiv = document.getElementById('messages');
+        
+        // Connect to SocketIO
+        const socket = io('http://localhost:5000');
+
+        // Connection events
+        socket.on('connect', function() {
+            console.log('✅ Connected to server');
+            statusDiv.className = 'status connected';
+            statusDiv.textContent = '✅ Connected';
+            addMessage('System', 'Connected to server', 'received');
+        });
+
+        socket.on('disconnect', function() {
+            console.log('❌ Disconnected from server');
+            statusDiv.className = 'status disconnected';
+            statusDiv.textContent = '❌ Disconnected';
+            addMessage('System', 'Disconnected from server', 'sent');
+        });
+
+        socket.on('connection_response', function(data) {
+            console.log('📥 Connection response:', data);
+            addMessage('Server', JSON.stringify(data), 'received');
+        });
+
+        // Auth init response
+        socket.on('auth_response', function(data) {
+            console.log('📥 Auth response:', data);
+            addMessage('auth_response', JSON.stringify(data, null, 2), 'received');
+        });
+
+        // Test message response
+        socket.on('test_response', function(data) {
+            console.log('📥 Test response:', data);
+            addMessage('test_response', JSON.stringify(data, null, 2), 'received');
+        });
+
+        // Functions
+        function testAuthInit() {
+            const data = {
+                user_id: 'test123',
+                token: 'fake_token',
+                timestamp: Date.now()
+            };
+            console.log('📤 Sending auth_init:', data);
+            socket.emit('auth_init', data);
+            addMessage('You', 'auth_init: ' + JSON.stringify(data), 'sent');
+        }
+
+        function testMessage() {
+            const data = {
+                message: 'Hello from client!',
+                timestamp: Date.now()
+            };
+            console.log('📤 Sending test_message:', data);
+            socket.emit('test_message', data);
+            addMessage('You', 'test_message: ' + JSON.stringify(data), 'sent');
+        }
+
+        function sendCustomMessage() {
+            const input = document.getElementById('customMessage');
+            const message = input.value.trim();
+            if (message) {
+                socket.emit('test_message', { message: message });
+                addMessage('You', message, 'sent');
+                input.value = '';
+            }
+        }
+
+        function addMessage(from, content, type) {
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.innerHTML = `<strong>${from}:</strong> ${content}`;
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function clearMessages() {
+            messagesDiv.innerHTML = '';
+        }
+
+        // Allow Enter key to send message
+        document.getElementById('customMessage').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendCustomMessage();
+            }
+        });
+    </script>
+</body>
+</html>

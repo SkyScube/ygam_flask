@@ -98,7 +98,7 @@ def deliver_message(message_id):
     if sender:
         store_incoming(msg.id, sender, msg.Id_user_receiver, msg.Content, msg.Date)
 
-    db.session.delete(msg)
+    msg.Is_delivered = True
     db.session.commit()
     logger.info("deliver_message: msg={} delivered and removed from server", message_id)
 

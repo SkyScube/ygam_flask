@@ -85,7 +85,7 @@ def test_user(app):
         Email='test@example.com',
         Password=ph.hash('test_password_hash'),  # Pre-hashed by client
         Is_verified=True,
-        Is_activaded=True,
+        Is_activated=True,
         Id_role='role_user',
         Last_conection=datetime.utcnow()
     )

@@ -48,7 +48,7 @@ class TestMessagesRoute:
         with app.app_context():
             user3 = User(
                 id=generate_cuid(), Username='user3c', Email='u3c@x.com',
-                Password='hash', Is_activaded=True, Id_role='role_user',
+                Password='hash', Is_activated=True, Id_role='role_user',
             )
             db.session.add(user3)
             db.session.commit()

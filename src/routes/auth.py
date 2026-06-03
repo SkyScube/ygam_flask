@@ -46,7 +46,7 @@ def api_register():
             Email          = email,
             Password       = ph.hash(password),
             Is_verified    = False,
-            Is_activaded   = True,     # PDF field name (typo kept for schema compliance)
+            Is_activated   = True,     # PDF field name (typo kept for schema compliance)
             Id_role        = 'user',   # String FK — matches Role.id seeded at startup
             Last_conection = datetime.utcnow(),
         )

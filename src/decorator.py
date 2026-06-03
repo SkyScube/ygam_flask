@@ -20,3 +20,13 @@ def jwt_required(f):
         return redirect(url_for('auth.login'))
 
     return decorated
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if request.current_user.role.id == "admin":
+            return f(*args, **kwargs)
+        return jsonify({'message': 'Not allowed here'}), 403
+    return decorated
+

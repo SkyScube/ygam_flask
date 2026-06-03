@@ -27,7 +27,7 @@ class TestRegister:
         user = User.query.filter_by(Email='newuser@example.com').first()
         assert user is not None
         assert user.Username == 'newuser'
-        assert user.Is_activaded is True
+        assert user.Is_activated is True
         assert user.Id_role == 'user'
 
     def test_register_duplicate_email(self, client, test_user):

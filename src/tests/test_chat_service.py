@@ -101,7 +101,7 @@ class TestGetConversations:
         from src.utils import generate_cuid
         user3 = User(
             id=generate_cuid(), Username='user3', Email='u3@x.com',
-            Password='hash', Is_activaded=True, Id_role='role_user',
+            Password='hash', Is_activated=True, Id_role='role_user',
         )
         db.session.add(user3)
         db.session.commit()
@@ -143,7 +143,7 @@ class TestGetMessageHistory:
     def test_isolation_from_third_party(self, app, test_user, test_user_2):
         user3 = User(
             id=generate_cuid(), Username='user3b', Email='u3b@x.com',
-            Password='hash', Is_activaded=True, Id_role='role_user',
+            Password='hash', Is_activated=True, Id_role='role_user',
         )
         db.session.add(user3)
         db.session.commit()
@@ -181,7 +181,7 @@ class TestSearchUsers:
         for i in range(5):
             u = User(
                 id=generate_cuid(), Username=f'alpha{i}', Email=f'alpha{i}@x.com',
-                Password='hash', Is_activaded=True, Id_role='role_user',
+                Password='hash', Is_activated=True, Id_role='role_user',
             )
             db.session.add(u)
         db.session.commit()
