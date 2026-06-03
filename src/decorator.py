@@ -27,6 +27,6 @@ def admin_required(f):
     def decorated(*args, **kwargs):
         if request.current_user.role.id == "admin":
             return f(*args, **kwargs)
-        return jsonify({'message': 'Not allowed here'}), 403
+        return jsonify({'message': 'Unauthorized'}), 403
     return decorated
 

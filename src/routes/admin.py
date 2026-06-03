@@ -7,6 +7,7 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
 @admin_bp.get('/messages')
+@jwt_required
 @admin_required
 def delivered_messages():
     msgs = (
@@ -16,9 +17,7 @@ def delivered_messages():
         .all()
     )
     user_ids = {m.Id_user_sender for m in msgs} | {m.Id_user_receiver for m in msgs}
-    print(user_ids)
     users = {u.id: u.Username for u in User.query.filter(User.id.in_(user_ids)).all()}
-    print(users)
 
     rows = [
         {

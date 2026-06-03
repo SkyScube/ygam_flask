@@ -100,7 +100,7 @@ def inject_new_access_token(response):
             httponly=True,
             secure=is_production,
             samesite='Strict',
-            max_age=15 * 60
+            max_age=10 * 60
         )
     return response
 
