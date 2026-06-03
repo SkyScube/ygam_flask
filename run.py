@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""
-Main entry point for running the Ygam Flask application.
-"""
+import os
 from src import create_app
+from src.extensions import socketio
 
-# Create the Flask application using factory pattern
-# create_tables=True will attempt to create tables on startup
-app = create_app(create_tables=True)
+# create_tables only in the actual serving process, not in the reloader's
+# stat/watcher process (WERKZEUG_RUN_MAIN is set only in the child process).
+# In non-debug mode there is no reloader, so always create tables.
+_is_reloader_child = os.environ.get('WERKZEUG_RUN_MAIN') == 'true'
+_debug = os.environ.get('FLASK_DEBUG', 'true').lower() in ('1', 'true')
+_should_init_db = _is_reloader_child or not _debug
+
+app = create_app(create_tables=_should_init_db)
 
 if __name__ == '__main__':
-    # Run the development server
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    socketio.run(app, debug=_debug, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)

@@ -1,0 +1,36 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ygam}
+      MYSQL_USER: ${MYSQL_USER:-ygam}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-ygampassword}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "3306:3306"
+
+  app:
+    build: .
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-ygam}:${MYSQL_PASSWORD:-ygampassword}@db:3306/${MYSQL_DATABASE:-ygam}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      FLASK_ENV: production
+      FLASK_CREATE_TABLES: "true"
+    ports:
+      - "5000:5000"
+
+volumes:
+  mysql_data:

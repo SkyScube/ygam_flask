@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YGAM — Chat</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* ── Sidebar ── */
+        #sidebar {
+            width: 300px;
+            min-width: 300px;
+            background: #1a1a1a;
+            border-right: 1px solid #2a2a2a;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #sidebar-header .app-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #6c63ff;
+            letter-spacing: 1px;
+        }
+
+        #sidebar-header .username {
+            font-size: 13px;
+            color: #888;
+        }
+
+        #search-container {
+            padding: 12px 16px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        #search-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #search-input:focus { border-color: #6c63ff; }
+
+        #search-results {
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 8px;
+            margin-top: 6px;
+            display: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .search-result-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.15s;
+        }
+
+        .search-result-item:hover { background: #2e2e2e; }
+
+        #conversations-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .conv-item {
+            padding: 14px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #222;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .conv-item:hover { background: #222; }
+        .conv-item.active { background: #252040; border-left: 3px solid #6c63ff; }
+
+        .conv-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #6c63ff33;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #6c63ff;
+            flex-shrink: 0;
+        }
+
+        .conv-info { flex: 1; min-width: 0; }
+
+        .conv-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 3px;
+        }
+
+        .conv-last-msg {
+            font-size: 12px;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ── Main chat area ── */
+        #chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #111;
+        }
+
+        #chat-header {
+            padding: 16px 20px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #2a2a2a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 65px;
+        }
+
+        #chat-header .contact-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #6c63ff33;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #6c63ff;
+            font-size: 14px;
+        }
+
+        #chat-header .contact-name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        #chat-placeholder {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #444;
+            font-size: 15px;
+        }
+
+        #messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .message-bubble {
+            max-width: 68%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .message-bubble.sent {
+            align-self: flex-end;
+            background: #6c63ff;
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-bubble.received {
+            align-self: flex-start;
+            background: #252525;
+            color: #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 10px;
+            opacity: 0.6;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        #input-area {
+            padding: 16px 20px;
+            background: #1a1a1a;
+            border-top: 1px solid #2a2a2a;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        #message-input {
+            flex: 1;
+            padding: 10px 16px;
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 22px;
+            color: #e0e0e0;
+            font-size: 14px;
+            outline: none;
+            resize: none;
+            max-height: 120px;
+            line-height: 1.5;
+            transition: border-color 0.2s;
+        }
+
+        #message-input:focus { border-color: #6c63ff; }
+
+        #send-btn {
+            width: 42px;
+            height: 42px;
+            background: #6c63ff;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, transform 0.1s;
+            flex-shrink: 0;
+        }
+
+        #send-btn:hover { background: #5a52e0; }
+        #send-btn:active { transform: scale(0.92); }
+        #send-btn:disabled { background: #333; cursor: not-allowed; }
+
+        #send-btn svg { width: 18px; height: 18px; fill: white; }
+
+        #connection-status {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 10px;
+            margin-left: auto;
+        }
+
+        #connection-status.connected { color: #4ade80; }
+        #connection-status.disconnected { color: #f87171; }
+
+        #logout-btn {
+            background: none;
+            border: 1px solid #333;
+            color: #888;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        #logout-btn:hover { border-color: #f87171; color: #f87171; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+    </style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ── -->
+<div id="sidebar">
+    <div id="sidebar-header">
+        <div>
+            <div class="app-name">YGAM</div>
+            <div class="username">{{ current_user.Username }}</div>
+        </div>
+        <button id="logout-btn" onclick="logout()">Déconnexion</button>
+    </div>
+
+    <div id="search-container">
+        <input type="text" id="search-input" placeholder="Rechercher un utilisateur..." autocomplete="off">
+        <div id="search-results"></div>
+    </div>
+
+    <div id="conversations-list">
+        <div style="padding:20px;color:#555;font-size:13px;text-align:center">Chargement...</div>
+    </div>
+</div>
+
+<!-- ── CHAT AREA ── -->
+<div id="chat-area">
+    <div id="chat-header">
+        <span id="connection-status" class="disconnected">● Déconnecté</span>
+    </div>
+
+    <div id="chat-placeholder">
+        Sélectionne une conversation ou recherche un utilisateur
+    </div>
+
+    <div id="messages-container" style="display:none"></div>
+
+    <div id="input-area" style="display:none">
+        <textarea id="message-input" placeholder="Écrire un message..." rows="1"></textarea>
+        <button id="send-btn" disabled>
+            <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </button>
+    </div>
+</div>
+
+<script>
+const CURRENT_USER_ID = '{{ current_user.id }}';
+let activeContactId = null;
+let socket = null;
+
+// ── Socket.IO ──────────────────────────────────────────────
+function initSocket() {
+    socket = io({ withCredentials: true });
+
+    socket.on('connect', () => {
+        document.getElementById('connection-status').textContent = '● Connecté';
+        document.getElementById('connection-status').className = 'connected';
+        document.getElementById('send-btn').disabled = false;
+    });
+
+    socket.on('disconnect', () => {
+        document.getElementById('connection-status').textContent = '● Déconnecté';
+        document.getElementById('connection-status').className = 'disconnected';
+        document.getElementById('send-btn').disabled = true;
+    });
+
+    socket.on('new_message', (msg) => {
+        if (msg.sender_id === activeContactId || msg.receiver_id === activeContactId) {
+            appendMessage(msg);
+        }
+        loadConversations(); // refresh last message in sidebar
+    });
+
+    socket.on('message_sent', (msg) => {
+        appendMessage(msg);
+        loadConversations();
+    });
+
+    socket.on('error', (data) => {
+        console.error('Socket error:', data.message);
+    });
+}
+
+// ── Conversations ──────────────────────────────────────────
+async function loadConversations() {
+    const res = await fetch('/api/conversations');
+    const convs = await res.json();
+    const list = document.getElementById('conversations-list');
+
+    if (convs.length === 0) {
+        list.innerHTML = '<div style="padding:20px;color:#555;font-size:13px;text-align:center">Aucune conversation. Recherche un utilisateur.</div>';
+        return;
+    }
+
+    list.innerHTML = convs.map(c => `
+        <div class="conv-item ${c.contact_id === activeContactId ? 'active' : ''}"
+             onclick="openConversation('${c.contact_id}', '${escHtml(c.contact_username)}')">
+            <div class="conv-avatar">${c.contact_username[0].toUpperCase()}</div>
+            <div class="conv-info">
+                <div class="conv-name">${escHtml(c.contact_username)}</div>
+                <div class="conv-last-msg">${escHtml(c.last_message || '')}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ── Open conversation ──────────────────────────────────────
+async function openConversation(contactId, contactUsername) {
+    activeContactId = contactId;
+
+    // Update header
+    document.getElementById('chat-header').innerHTML = `
+        <div class="contact-avatar">${contactUsername[0].toUpperCase()}</div>
+        <div class="contact-name">${escHtml(contactUsername)}</div>
+        <span id="connection-status" class="${socket?.connected ? 'connected' : 'disconnected'}">
+            ● ${socket?.connected ? 'Connecté' : 'Déconnecté'}
+        </span>
+    `;
+
+    // Show input area
+    document.getElementById('chat-placeholder').style.display = 'none';
+    document.getElementById('messages-container').style.display = 'flex';
+    document.getElementById('input-area').style.display = 'flex';
+    document.getElementById('message-input').focus();
+
+    // Load history
+    const res = await fetch(`/api/messages/${contactId}`);
+    const messages = await res.json();
+    const container = document.getElementById('messages-container');
+    container.innerHTML = '';
+    messages.forEach(appendMessage);
+    container.scrollTop = container.scrollHeight;
+
+    // Highlight active in sidebar
+    document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+    const items = document.querySelectorAll('.conv-item');
+    items.forEach(el => {
+        if (el.onclick?.toString().includes(contactId)) el.classList.add('active');
+    });
+    loadConversations();
+}
+
+// ── Send message ───────────────────────────────────────────
+function sendMessage() {
+    const input = document.getElementById('message-input');
+    const content = input.value.trim();
+    if (!content || !activeContactId || !socket?.connected) return;
+
+    socket.emit('send_message', { to: activeContactId, content });
+    input.value = '';
+    input.style.height = 'auto';
+}
+
+// ── Append message bubble ──────────────────────────────────
+function appendMessage(msg) {
+    const container = document.getElementById('messages-container');
+    const isSent = msg.sender_id === CURRENT_USER_ID;
+
+    const div = document.createElement('div');
+    div.classList.add('message-bubble', isSent ? 'sent' : 'received');
+
+    const time = new Date(msg.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    div.innerHTML = `
+        <div>${escHtml(msg.content)}</div>
+        <div class="message-time">${time}</div>
+    `;
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+// ── Search ────────────────────────────────────────────────
+let searchTimeout = null;
+document.getElementById('search-input').addEventListener('input', function () {
+    clearTimeout(searchTimeout);
+    const q = this.value.trim();
+    const results = document.getElementById('search-results');
+
+    if (q.length < 2) {
+        results.style.display = 'none';
+        return;
+    }
+
+    searchTimeout = setTimeout(async () => {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+        const users = await res.json();
+        if (users.length === 0) {
+            results.style.display = 'none';
+            return;
+        }
+        results.style.display = 'block';
+        results.innerHTML = users.map(u => `
+            <div class="search-result-item" onclick="startNewConv('${u.id}', '${escHtml(u.username)}')">
+                ${escHtml(u.username)}
+            </div>
+        `).join('');
+    }, 300);
+});
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#search-container')) {
+        document.getElementById('search-results').style.display = 'none';
+    }
+});
+
+function startNewConv(userId, username) {
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-results').style.display = 'none';
+    openConversation(userId, username);
+}
+
+// ── Input auto-resize + Enter ──────────────────────────────
+document.getElementById('message-input').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+document.getElementById('message-input').addEventListener('input', function () {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+document.getElementById('send-btn').addEventListener('click', sendMessage);
+
+// ── Logout ────────────────────────────────────────────────
+async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/auth/login';
+}
+
+// ── Utils ─────────────────────────────────────────────────
+function escHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+// ── Init ──────────────────────────────────────────────────
+initSocket();
+loadConversations();
+</script>
+</body>
+</html>

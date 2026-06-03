@@ -28,18 +28,16 @@ class TestIndexRoute:
         assert data['status'] == 'running'
         assert data['username'] == test_user.Username
         assert data['email'] == test_user.Email
-        assert 'endpoints' in data
 
-    def test_index_returns_endpoints(self, authenticated_client):
-        """Test index route returns endpoint information"""
+    def test_index_returns_user_info(self, authenticated_client, test_user):
+        """Test index route returns authenticated user information"""
         response = authenticated_client.get('/')
 
         assert response.status_code == 200
         data = json.loads(response.data)
 
-        assert 'endpoints' in data
-        assert 'health' in data['endpoints']
-        assert data['endpoints']['health'] == '/health'
+        assert data['username'] == test_user.Username
+        assert data['email'] == test_user.Email
 
     def test_index_json_response(self, authenticated_client):
         """Test index returns JSON"""

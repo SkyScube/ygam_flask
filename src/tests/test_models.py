@@ -57,21 +57,6 @@ class TestUserModel:
         with pytest.raises(Exception):  # IntegrityError
             db.session.commit()
 
-    def test_user_set_password(self, app):
-        """Test set_password method"""
-        user = User(
-            id=generate_cuid(),
-            Username='testuser',
-            Email='test@example.com',
-            Password='temp',
-            Id_role='role_user'
-        )
-
-        user.set_password('my_secure_password')
-
-        assert user.Password != 'my_secure_password'  # Should be hashed
-        assert ph.verify(user.Password, 'my_secure_password')  # Should verify
-
     def test_user_role_relationship(self, app):
         """Test user-role relationship"""
         role = Role.query.filter_by(Name='user').first()

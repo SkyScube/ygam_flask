@@ -21,14 +21,14 @@ class TestRegister:
 
         assert response.status_code == 201
         data = json.loads(response.data)
-        assert data['message'] == 'Account created successfully'
+        assert data['message'] == 'Compte créé avec succès'
 
         # Verify user exists in database
         user = User.query.filter_by(Email='newuser@example.com').first()
         assert user is not None
         assert user.Username == 'newuser'
         assert user.Is_activaded is True
-        assert user.Id_role == '2'  # Id_role is a string in the model
+        assert user.Id_role == 'user'
 
     def test_register_duplicate_email(self, client, test_user):
         """Test registration with existing email"""
@@ -39,7 +39,7 @@ class TestRegister:
                                     'password': 'hashed_password'
                                 })
 
-        assert response.status_code == 500  # Current behavior
+        assert response.status_code == 409
 
     def test_register_duplicate_username(self, client, test_user):
         """Test registration with existing username"""
@@ -50,7 +50,7 @@ class TestRegister:
                                     'password': 'hashed_password'
                                 })
 
-        assert response.status_code == 500  # Current behavior
+        assert response.status_code == 409
 
     def test_register_missing_fields(self, client):
         """Test registration with missing required fields"""
@@ -60,7 +60,7 @@ class TestRegister:
                                     # Missing email and password
                                 })
 
-        assert response.status_code == 500  # Current behavior
+        assert response.status_code == 400
 
 
 class TestLogin:
@@ -77,7 +77,7 @@ class TestLogin:
 
         assert response.status_code == 200
         data = json.loads(response.data)
-        assert data['message'] == 'Login successful'
+        assert data['message'] == 'Connexion réussie'
         assert data['user']['id'] == test_user.id
         assert data['user']['username'] == test_user.Username
         assert data['user']['email'] == test_user.Email
@@ -90,6 +90,20 @@ class TestLogin:
         assert token is not None
         assert token.is_revoked is False
 
+    def test_login_by_username(self, client, test_user):
+        """Test login using username instead of email"""
+        response = client.post('/api/auth/login',
+                                json={
+                                    'identifier': test_user.Username,
+                                    'password': 'test_password_hash',
+                                    'remember': False
+                                })
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['message'] == 'Connexion réussie'
+        assert data['user']['username'] == test_user.Username
+
     def test_login_wrong_password(self, client, test_user):
         """Test login with incorrect password"""
         response = client.post('/api/auth/login',
@@ -101,7 +115,7 @@ class TestLogin:
 
         assert response.status_code == 401
         data = json.loads(response.data)
-        assert data['message'] == 'Email or password incorrect'
+        assert data['message'] == 'Email ou mot de passe incorrect'
 
     def test_login_nonexistent_user(self, client):
         """Test login with non-existent email"""
@@ -114,7 +128,7 @@ class TestLogin:
 
         assert response.status_code == 401
         data = json.loads(response.data)
-        assert data['message'] == 'Email or password incorrect'
+        assert data['message'] == 'Email ou mot de passe incorrect'
 
     def test_login_missing_fields(self, client):
         """Test login with missing fields"""
@@ -137,7 +151,7 @@ class TestLogout:
 
         assert response.status_code == 200
         data = json.loads(response.data)
-        assert data['message'] == 'Logout successful'
+        assert data['message'] == 'Déconnexion réussie'
 
         # Verify token is revoked in database
         db.session.refresh(token_record)
@@ -151,7 +165,7 @@ class TestLogout:
 
         assert response.status_code == 401
         data = json.loads(response.data)
-        assert data['message'] == 'Not authenticated'
+        assert data['message'] == 'Non authentifié'
 
     def test_logout_with_invalid_token(self, client):
         """Test logout with invalid token"""

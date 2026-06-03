@@ -1,48 +1,75 @@
 import os
-from flask import Flask
+from flask import Flask, jsonify
 
 
 def create_app(create_tables=None):
-    """Factory function to create and configure the Flask application.
-
-    Args:
-        create_tables: If True, creates database tables on startup.
-                      If None (default), checks FLASK_CREATE_TABLES env var.
-                      Set to False to skip table creation.
-    """
-    # Import inside function to avoid circular imports
-    from src.models import db
+    from src.models import db, seed_roles
     from src.config import Config
+    from src.extensions import socketio
+    from src.logger import logger
 
-    # Create Flask app
     app = Flask(__name__)
     app.config.from_object(Config)
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-    # Initialize database
+    # Ensure client_data dir exists for SQLite
+    client_db_path = app.config.get('CLIENT_DB_PATH', '')
+    if client_db_path and os.path.dirname(client_db_path):
+        os.makedirs(os.path.dirname(client_db_path), exist_ok=True)
+
     db.init_app(app)
+    socketio.init_app(app, cors_allowed_origins='*', async_mode='threading')
 
-    # Register blueprints (import inside function)
+    # Blueprints
     from src.routes.main import main_bp
     from src.routes.auth import auth_bp
+    from src.routes.chat import chat_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(chat_bp)
 
-    # Register middleware (must be done after app creation)
+    # HTTP middleware
     from src.middleware import register_middleware
     register_middleware(app)
 
-    # Create database tables based on parameter or environment variable
+    # Socket.IO events
+    from src.sockets import register_sockets
+    register_sockets(socketio)
+
+    # Global error handlers
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        logger.exception("Unhandled exception: {}", str(e))
+        return jsonify({'message': 'Erreur interne du serveur'}), 500
+
+    @app.errorhandler(404)
+    def handle_404(e):
+        return jsonify({'message': 'Route introuvable'}), 404
+
+    @app.errorhandler(405)
+    def handle_405(e):
+        return jsonify({'message': 'Méthode non autorisée'}), 405
+
+    # DB tables
     if create_tables is None:
-        # Check environment variable (default to False for flask run)
         create_tables = os.getenv('FLASK_CREATE_TABLES', 'false').lower() == 'true'
 
     if create_tables:
+        import time
+        import src.client_models  # noqa: F401 — registers models before create_all
         with app.app_context():
-            try:
-                db.create_all()
-                app.logger.info("Database tables created successfully")
-            except Exception as e:
-                app.logger.warning(f"Could not create database tables: {e}")
-                app.logger.warning("Run 'flask db create' manually or start your database service")
+            for attempt in range(1, 11):
+                try:
+                    db.create_all()
+                    logger.info("Database tables created successfully")
+                    seed_roles()
+                    logger.info("Roles seeded")
+                    break
+                except Exception as e:
+                    if attempt == 10:
+                        logger.error("Could not initialize database after 10 attempts: {}", e)
+                    else:
+                        logger.warning("DB not ready (attempt {}/10), retrying in {}s...", attempt, attempt * 2)
+                        time.sleep(attempt * 2)
 
     return app
