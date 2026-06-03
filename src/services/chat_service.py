@@ -2,6 +2,7 @@ from datetime import datetime
 from sqlalchemy import or_, and_
 from src.models import db, User, Message
 from src.utils import generate_cuid
+from src.logger import logger
 
 
 def get_conversations(user):
@@ -19,6 +20,7 @@ def get_conversations(user):
         .filter(Message.Id_user_receiver == user.id)
     )
     contact_ids = {row.other_id for row in sent.union(received).all()}
+    logger.debug("get_conversations: user={} has {} contacts", user.id, len(contact_ids))
 
     conversations = []
     for contact_id in contact_ids:
@@ -50,7 +52,7 @@ def get_conversations(user):
 
 
 def get_message_history(user, other_user_id, limit=50):
-    """Returns the last `limit` messages between user and other_user_id."""
+    logger.debug("get_message_history: user={} with other={} limit={}", user.id, other_user_id, limit)
     messages = (
         Message.query
         .filter(
@@ -67,7 +69,7 @@ def get_message_history(user, other_user_id, limit=50):
 
 
 def persist_message(sender_id, receiver_id, content_text):
-    """Persists a plain-text message."""
+    logger.info("persist_message: sender={} -> receiver={}", sender_id, receiver_id)
     msg = Message(
         id=generate_cuid(),
         Id_user_sender=sender_id,
@@ -86,10 +88,11 @@ def mark_delivered(message_id):
     if msg:
         msg.Is_delivered = True
         db.session.commit()
+        logger.debug("mark_delivered: message={}", message_id)
 
 
 def search_users(query, exclude_user_id, limit=10):
-    """Find users by username prefix."""
+    logger.debug("search_users: query='{}' exclude={}", query, exclude_user_id)
     return (
         User.query
         .filter(User.Username.ilike(f'{query}%'), User.id != exclude_user_id)
