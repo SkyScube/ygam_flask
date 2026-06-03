@@ -24,9 +24,11 @@ def create_app(create_tables=None):
     from src.routes.main import main_bp
     from src.routes.auth import auth_bp
     from src.routes.chat import chat_bp
+    from src.routes.admin import admin_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(chat_bp)
+    app.register_blueprint(admin_bp)
 
     # HTTP middleware
     from src.middleware import register_middleware
