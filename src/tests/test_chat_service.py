@@ -42,12 +42,13 @@ class TestPersistMessage:
 
 
 class TestMarkDelivered:
-    def test_deliver_removes_from_mysql(self, app, test_user, test_user_2):
-        """After delivery, message is deleted from the server relay (MySQL)."""
+    def test_deliver_sets_is_delivered(self, app, test_user, test_user_2):
+        """After delivery, Is_delivered=True and the row stays in MySQL."""
         result = persist_message(test_user.id, test_user_2.id, 'deliver me')
-        assert Message.query.get(result['id']) is not None
         deliver_message(result['id'])
-        assert Message.query.get(result['id']) is None
+        msg = Message.query.get(result['id'])
+        assert msg is not None
+        assert msg.Is_delivered is True
 
     def test_deliver_stores_incoming_sqlite(self, app, test_user, test_user_2):
         """Delivery writes the incoming LocalMessage to the receiver's SQLite."""
