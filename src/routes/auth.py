@@ -30,7 +30,7 @@ def api_register():
             Email=email,
             Password=ph.hash(password), # Argon2 hash of SHA256*1000 client-side hash
             Is_verified=False,
-            Is_activaded=True,
+            Is_activated=True,
             Id_role=2,
             Last_conection=datetime.utcnow(),
         )

@@ -3,37 +3,37 @@ from flask import Flask
 
 
 def create_app(create_tables=None):
-    """Factory function to create and configure the Flask application.
-
-    Args:
-        create_tables: If True, creates database tables on startup.
-                      If None (default), checks FLASK_CREATE_TABLES env var.
-                      Set to False to skip table creation.
-    """
-    # Import inside function to avoid circular imports
     from src.models import db
     from src.config import Config
+    from src.extensions import socketio
 
-    # Create Flask app
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # Initialize database
-    db.init_app(app)
+    # Allow CORS for Socket.IO (same-origin dev, but socketio needs it enabled)
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-    # Register blueprints (import inside function)
+    db.init_app(app)
+    socketio.init_app(app, cors_allowed_origins='*', async_mode='threading')
+
+    # Blueprints
     from src.routes.main import main_bp
     from src.routes.auth import auth_bp
+    from src.routes.chat import chat_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(chat_bp)
 
-    # Register middleware (must be done after app creation)
+    # HTTP middleware (before/after_request)
     from src.middleware import register_middleware
     register_middleware(app)
 
-    # Create database tables based on parameter or environment variable
+    # Socket.IO events
+    from src.sockets.chat import register_socket_events
+    register_socket_events(socketio)
+
+    # Create DB tables
     if create_tables is None:
-        # Check environment variable (default to False for flask run)
         create_tables = os.getenv('FLASK_CREATE_TABLES', 'false').lower() == 'true'
 
     if create_tables:
@@ -43,6 +43,5 @@ def create_app(create_tables=None):
                 app.logger.info("Database tables created successfully")
             except Exception as e:
                 app.logger.warning(f"Could not create database tables: {e}")
-                app.logger.warning("Run 'flask db create' manually or start your database service")
 
     return app

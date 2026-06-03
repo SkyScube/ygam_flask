@@ -36,8 +36,9 @@ def authenticate_and_refresh():
     """
     print(f"🔍 [MIDDLEWARE] Requête vers: {request.endpoint}")
 
-    # Routes publiques
-    if request.endpoint in ['auth.api_login', 'auth.api_register', 'static']:
+    # Routes publiques (y compris les endpoints Socket.IO)
+    if request.endpoint in ['auth.api_login', 'auth.api_register', 'static'] or \
+       (request.endpoint and request.endpoint.startswith('socketio')):
         print("✅ [MIDDLEWARE] Route publique, on laisse passer")
         return None
 
