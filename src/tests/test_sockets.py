@@ -95,16 +95,28 @@ class TestSendMessage:
         assert 'message_sent' in sent_names
         assert 'new_message' in recv_names
 
-    def test_send_message_persisted_to_db(self, app, socket_client, socket_client_2, test_user, test_user_2):
-        socket_client.emit('send_message', {'to': test_user_2.id, 'content': 'persist me'})
+    def test_send_message_removed_after_online_delivery(self, app, socket_client, socket_client_2, test_user, test_user_2):
+        """When receiver is connected, message is deleted from MySQL after delivery."""
+        socket_client.emit('send_message', {'to': test_user_2.id, 'content': 'relay test'})
 
         with app.app_context():
+            # Receiver was online → deliver_message() was called → MySQL row deleted
             msg = Message.query.filter_by(
                 Id_user_sender=test_user.id,
                 Id_user_receiver=test_user_2.id
             ).first()
-            assert msg is not None
-            assert msg.Content == 'persist me'
+            assert msg is None
+
+    def test_send_message_stored_in_sqlite_after_delivery(self, app, socket_client, socket_client_2, test_user, test_user_2):
+        """Both sides (outgoing + incoming) must appear in SQLite after delivery."""
+        from src.client_models import LocalMessage
+        socket_client.emit('send_message', {'to': test_user_2.id, 'content': 'sqlite check'})
+
+        with app.app_context():
+            outgoing = LocalMessage.query.filter_by(direction='outgoing').first()
+            incoming = LocalMessage.query.filter_by(direction='incoming').first()
+            assert outgoing is not None
+            assert incoming is not None
 
     def test_send_message_content(self, app, socket_client, socket_client_2, test_user, test_user_2):
         socket_client.get_received()

@@ -3,7 +3,7 @@ import pytest
 from datetime import datetime
 from src.models import db
 from src.client_models import Contact, Conversation, LocalMessage
-from src.services.chat_service import persist_message
+from src.services.chat_service import persist_message, deliver_message
 
 
 class TestStoreOutgoing:
@@ -44,8 +44,10 @@ class TestStoreOutgoing:
 
 
 class TestStoreIncoming:
-    def test_persist_creates_incoming_for_receiver(self, app, test_user, test_user_2):
-        persist_message(test_user.id, test_user_2.id, 'incoming test')
+    def test_deliver_creates_incoming_for_receiver(self, app, test_user, test_user_2):
+        """Incoming LocalMessage is written only when deliver_message() is called."""
+        result = persist_message(test_user.id, test_user_2.id, 'incoming test')
+        deliver_message(result['id'])
 
         msg = LocalMessage.query.filter_by(direction='incoming').first()
         assert msg is not None
@@ -53,8 +55,9 @@ class TestStoreIncoming:
         assert msg.status == 'received'
         assert msg.received_at is not None
 
-    def test_persist_creates_contact_for_receiver(self, app, test_user, test_user_2):
-        persist_message(test_user.id, test_user_2.id, 'hi')
+    def test_deliver_creates_contact_for_receiver(self, app, test_user, test_user_2):
+        result = persist_message(test_user.id, test_user_2.id, 'hi')
+        deliver_message(result['id'])
 
         contact = Contact.query.filter_by(
             owner_user_id=test_user_2.id,
@@ -64,8 +67,10 @@ class TestStoreIncoming:
         assert contact.username == test_user.Username
 
     def test_unread_count_increments(self, app, test_user, test_user_2):
-        persist_message(test_user.id, test_user_2.id, 'msg1')
-        persist_message(test_user.id, test_user_2.id, 'msg2')
+        r1 = persist_message(test_user.id, test_user_2.id, 'msg1')
+        r2 = persist_message(test_user.id, test_user_2.id, 'msg2')
+        deliver_message(r1['id'])
+        deliver_message(r2['id'])
 
         contact = Contact.query.filter_by(
             owner_user_id=test_user_2.id,
@@ -73,6 +78,11 @@ class TestStoreIncoming:
         ).first()
         conv = Conversation.query.filter_by(contact_id=contact.contact_id).first()
         assert conv.unread_count == 2
+
+    def test_no_incoming_without_delivery(self, app, test_user, test_user_2):
+        """persist_message alone must NOT create an incoming record (relay semantics)."""
+        persist_message(test_user.id, test_user_2.id, 'not delivered yet')
+        assert LocalMessage.query.filter_by(direction='incoming').first() is None
 
 
 class TestIdempotentContactConversation:

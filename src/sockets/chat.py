@@ -4,7 +4,7 @@ from flask import request
 from flask_socketio import emit, join_room, leave_room
 
 from src.models import User
-from src.services.chat_service import persist_message, mark_delivered
+from src.services.chat_service import persist_message, deliver_message, get_pending_messages
 from src.logger import logger
 
 # Maps socket session id -> user_id (avoids relying on flask session with manage_session=False)
@@ -38,6 +38,14 @@ def register_socket_events(sio):
         join_room(f'user:{user.id}')
         logger.info("Socket connected: user={} sid={}", user.Username, request.sid)
         emit('connected', {'user_id': user.id, 'username': user.Username})
+
+        # Flush messages that arrived while the user was offline
+        pending = get_pending_messages(user.id)
+        for msg in pending:
+            emit('new_message', msg)
+            deliver_message(msg['id'])
+        if pending:
+            logger.info("Flushed {} pending messages to user={}", len(pending), user.Username)
 
     @sio.on('disconnect')
     def on_disconnect():
@@ -73,4 +81,8 @@ def register_socket_events(sio):
 
         sio.emit('new_message', msg, to=f'user:{receiver_id}')
         emit('message_sent', msg)
-        mark_delivered(msg['id'])
+
+        # If receiver is currently connected, deliver immediately and clear from server
+        if any(uid == receiver_id for uid in connected_users.values()):
+            deliver_message(msg['id'])
+            logger.debug("send_message: receiver online, message delivered and removed from server")

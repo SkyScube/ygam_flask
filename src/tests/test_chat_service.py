@@ -7,6 +7,7 @@ from src.services.chat_service import (
     get_message_history,
     persist_message,
     mark_delivered,
+    deliver_message,
     search_users,
     _serialize_message,
 )
@@ -41,15 +42,26 @@ class TestPersistMessage:
 
 
 class TestMarkDelivered:
-    def test_marks_existing_message(self, app, test_user, test_user_2):
+    def test_deliver_removes_from_mysql(self, app, test_user, test_user_2):
+        """After delivery, message is deleted from the server relay (MySQL)."""
         result = persist_message(test_user.id, test_user_2.id, 'deliver me')
-        mark_delivered(result['id'])
-        msg = Message.query.get(result['id'])
-        assert msg.Is_delivered is True
+        assert Message.query.get(result['id']) is not None
+        deliver_message(result['id'])
+        assert Message.query.get(result['id']) is None
+
+    def test_deliver_stores_incoming_sqlite(self, app, test_user, test_user_2):
+        """Delivery writes the incoming LocalMessage to the receiver's SQLite."""
+        from src.client_models import LocalMessage
+        result = persist_message(test_user.id, test_user_2.id, 'deliver me')
+        deliver_message(result['id'])
+        incoming = LocalMessage.query.filter_by(
+            server_message_id=result['id'], direction='incoming'
+        ).first()
+        assert incoming is not None
+        assert incoming.status == 'received'
 
     def test_noop_on_missing_id(self, app):
-        # Should not raise
-        mark_delivered('nonexistent_id')
+        deliver_message('nonexistent_id')
 
 
 class TestGetConversations:
@@ -65,7 +77,9 @@ class TestGetConversations:
         assert convs[0]['contact_username'] == test_user_2.Username
 
     def test_returns_contact_after_received_message(self, app, test_user, test_user_2):
-        persist_message(test_user_2.id, test_user.id, 'hey back')
+        # test_user receives a message only after deliver_message is called
+        result = persist_message(test_user_2.id, test_user.id, 'hey back')
+        deliver_message(result['id'])
         convs = get_conversations(test_user)
         assert len(convs) == 1
         assert convs[0]['contact_id'] == test_user_2.id
@@ -78,7 +92,8 @@ class TestGetConversations:
 
     def test_deduplicates_conversation(self, app, test_user, test_user_2):
         persist_message(test_user.id, test_user_2.id, 'a')
-        persist_message(test_user_2.id, test_user.id, 'b')
+        result = persist_message(test_user_2.id, test_user.id, 'b')
+        deliver_message(result['id'])  # creates incoming side for test_user
         convs = get_conversations(test_user)
         assert len(convs) == 1
 
@@ -105,8 +120,10 @@ class TestGetMessageHistory:
         assert history == []
 
     def test_returns_messages_between_two_users(self, app, test_user, test_user_2):
+        # outgoing is stored on persist, incoming only on delivery
         persist_message(test_user.id, test_user_2.id, 'hi')
-        persist_message(test_user_2.id, test_user.id, 'hello')
+        result = persist_message(test_user_2.id, test_user.id, 'hello')
+        deliver_message(result['id'])
         history = get_message_history(test_user, test_user_2.id)
         assert len(history) == 2
 
