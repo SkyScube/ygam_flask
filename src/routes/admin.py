@@ -7,10 +7,8 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
 @admin_bp.get('/messages')
-@jwt_required
 @admin_required
 def delivered_messages():
-    logger.info("admin/messages: accessed by user={}", request.current_user.id)
     msgs = (
         Message.query
         .filter_by(Is_delivered=True)
@@ -19,7 +17,9 @@ def delivered_messages():
     )
     # Resolve sender/receiver usernames in one pass
     user_ids = {m.Id_user_sender for m in msgs} | {m.Id_user_receiver for m in msgs}
+    print(user_ids)
     users = {u.id: u.Username for u in User.query.filter(User.id.in_(user_ids)).all()}
+    print(users)
 
     rows = [
         {
@@ -31,4 +31,5 @@ def delivered_messages():
         }
         for m in msgs
     ]
+    logger.info("admin/messages: accessed by user={}", request.current_user.id)
     return render_template('admin/messages.html', messages=rows, current_user=request.current_user)

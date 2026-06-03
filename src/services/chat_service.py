@@ -100,7 +100,7 @@ def deliver_message(message_id):
 
     msg.Is_delivered = True
     db.session.commit()
-    logger.info("deliver_message: msg={} delivered and removed from server", message_id)
+    logger.info("deliver_message: msg={} delivered and removed logically from server", message_id)
 
 
 def get_pending_messages(user_id):
