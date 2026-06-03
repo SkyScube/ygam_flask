@@ -55,20 +55,21 @@ def create_app(create_tables=None):
         create_tables = os.getenv('FLASK_CREATE_TABLES', 'false').lower() == 'true'
 
     if create_tables:
+        import time
+        import src.client_models  # noqa: F401 — registers models before create_all
         with app.app_context():
-            # Import client models so SQLAlchemy registers them before create_all
-            import src.client_models  # noqa: F401
-            try:
-                db.create_all()
-                logger.info("Database tables created successfully")
-            except Exception as e:
-                logger.error("Could not create database tables: {}", e)
-
-            # Seed default roles
-            try:
-                seed_roles()
-                logger.info("Roles seeded")
-            except Exception as e:
-                logger.error("Could not seed roles: {}", e)
+            for attempt in range(1, 11):
+                try:
+                    db.create_all()
+                    logger.info("Database tables created successfully")
+                    seed_roles()
+                    logger.info("Roles seeded")
+                    break
+                except Exception as e:
+                    if attempt == 10:
+                        logger.error("Could not initialize database after 10 attempts: {}", e)
+                    else:
+                        logger.warning("DB not ready (attempt {}/10), retrying in {}s...", attempt, attempt * 2)
+                        time.sleep(attempt * 2)
 
     return app
