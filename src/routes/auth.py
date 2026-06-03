@@ -22,7 +22,6 @@ def api_register():
     username = request.json.get('username')
     email = request.json.get('email')
     password = request.json.get('password')
-    print(datetime.utcnow())
     try:
         user = User(
             id=generate_cuid(),
@@ -37,7 +36,6 @@ def api_register():
         db.session.add(user)
         db.session.commit()
 
-        print(username, email, password)
         return jsonify({
             'message': 'Account created successfully'
         }), 201
@@ -123,8 +121,8 @@ def post_logout():
             if token_record:
                 token_record.is_revoked = True
                 db.session.commit()
-        except Exception as e:
-            print(f"Error revoking token: {e}")
+        except Exception:
+            pass
 
     response = make_response(jsonify({
         'message': 'Logout successful'

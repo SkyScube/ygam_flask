@@ -29,8 +29,8 @@ def create_app(create_tables=None):
     register_middleware(app)
 
     # Socket.IO events
-    from src.sockets.chat import register_socket_events
-    register_socket_events(socketio)
+    from src.sockets import register_sockets
+    register_sockets(socketio)
 
     # Create DB tables
     if create_tables is None:
