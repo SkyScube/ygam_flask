@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, jsonify
 from src.decorator import jwt_required, admin_required
-from src.models import Message, User
+from src.models import db, Message, User
 from src.logger import logger
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -15,7 +15,6 @@ def delivered_messages():
         .order_by(Message.Date.desc())
         .all()
     )
-    # Resolve sender/receiver usernames in one pass
     user_ids = {m.Id_user_sender for m in msgs} | {m.Id_user_receiver for m in msgs}
     print(user_ids)
     users = {u.id: u.Username for u in User.query.filter(User.id.in_(user_ids)).all()}
@@ -33,3 +32,16 @@ def delivered_messages():
     ]
     logger.info("admin/messages: accessed by user={}", request.current_user.id)
     return render_template('admin/messages.html', messages=rows, current_user=request.current_user)
+
+
+@admin_bp.delete('/messages/<string:message_id>')
+@jwt_required
+@admin_required
+def delete_message(message_id):
+    msg = Message.query.get(message_id)
+    if not msg:
+        return jsonify({'message': 'Message introuvable'}), 404
+    db.session.delete(msg)
+    db.session.commit()
+    logger.info("admin: message={} physically deleted by user={}", message_id, request.current_user.id)
+    return jsonify({'message': 'Supprimé'}), 200
