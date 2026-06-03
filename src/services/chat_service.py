@@ -70,16 +70,28 @@ def get_message_history(user, other_user_id, limit=50):
 
 def persist_message(sender_id, receiver_id, content_text):
     logger.info("persist_message: sender={} -> receiver={}", sender_id, receiver_id)
+    now = datetime.utcnow()
     msg = Message(
         id=generate_cuid(),
         Id_user_sender=sender_id,
         Id_user_receiver=receiver_id,
         Content=content_text,
         Is_delivered=False,
-        Date=datetime.utcnow(),
+        Date=now,
     )
     db.session.add(msg)
     db.session.commit()
+
+    # Mirror into client SQLite DB (sender outgoing + receiver incoming)
+    from src.services.client_service import store_outgoing, store_incoming
+    receiver = User.query.get(receiver_id)
+    sender = User.query.get(sender_id)
+    if receiver:
+        store_outgoing(msg.id, sender_id, receiver, content_text, now)
+    if sender:
+        store_incoming(msg.id, sender, receiver_id, content_text, now)
+    db.session.commit()
+
     return _serialize_message(msg)
 
 
