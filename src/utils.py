@@ -12,6 +12,11 @@ def generate_cuid():
 def get_user_by_email(email: str):
     return db.session.query(User).filter(User.Email == email).first()
 
+def get_user_by_identifier(identifier: str):
+    return db.session.query(User).filter(
+        (User.Email == identifier) | (User.Username == identifier)
+    ).first()
+
 
 def verify_password(plain: str, hashed: str) -> bool:
     try:

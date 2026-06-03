@@ -6,7 +6,7 @@ import jwt
 from flask import Blueprint, render_template, request, jsonify, make_response
 from sqlalchemy.exc import IntegrityError
 from src.models import db, User, Token, ph
-from src.utils import generate_cuid, get_user_by_email, verify_password, hash_token
+from src.utils import generate_cuid, get_user_by_email, get_user_by_identifier, verify_password, hash_token
 from src.logger import logger
 
 auth_bp = Blueprint('auth', __name__)
@@ -83,7 +83,7 @@ def api_login():
     if not identifier or not password:
         return jsonify({'message': 'Identifiant et mot de passe requis'}), 400
 
-    user = get_user_by_email(identifier)
+    user = get_user_by_identifier(identifier)
     if not user:
         logger.warning("Login attempt with unknown identifier: {}", identifier)
         return jsonify({'message': 'Email ou mot de passe incorrect'}), 401
