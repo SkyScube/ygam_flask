@@ -1,9 +1,5 @@
-import os
 from functools import wraps
-
-import jwt
 from flask import request, jsonify, redirect, url_for
-from src.utils import get_user_by_id
 
 
 def jwt_required(f):
@@ -12,11 +8,14 @@ def jwt_required(f):
         if hasattr(request, 'current_user') and request.current_user:
             return f(*args, **kwargs)
 
-        if request.is_json or request.headers.get('Accept') == 'application/json':
-            return jsonify({
-                'message': 'Authentication required',
-                'redirect': '/auth/login'
-            }), 401
+        # API routes and explicit JSON requests always get 401 JSON, never a redirect
+        wants_json = (
+            request.is_json
+            or request.headers.get('Accept') == 'application/json'
+            or request.path.startswith('/api/')
+        )
+        if wants_json:
+            return jsonify({'message': 'Authentication required'}), 401
 
         return redirect(url_for('auth.login'))
 
