@@ -3,7 +3,7 @@ from flask import Flask, jsonify
 
 
 def create_app(create_tables=None):
-    from src.models import db
+    from src.models import db, seed_roles
     from src.config import Config
     from src.extensions import socketio
     from src.logger import logger
@@ -11,6 +11,11 @@ def create_app(create_tables=None):
     app = Flask(__name__)
     app.config.from_object(Config)
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+    # Ensure client_data dir exists for SQLite
+    client_db_path = app.config.get('CLIENT_DB_PATH', '')
+    if client_db_path and os.path.dirname(client_db_path):
+        os.makedirs(os.path.dirname(client_db_path), exist_ok=True)
 
     db.init_app(app)
     socketio.init_app(app, cors_allowed_origins='*', async_mode='threading')
@@ -23,7 +28,7 @@ def create_app(create_tables=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(chat_bp)
 
-    # HTTP middleware (before/after_request)
+    # HTTP middleware
     from src.middleware import register_middleware
     register_middleware(app)
 
@@ -31,10 +36,10 @@ def create_app(create_tables=None):
     from src.sockets import register_sockets
     register_sockets(socketio)
 
-    # Global error handlers — log ALL unhandled exceptions
+    # Global error handlers
     @app.errorhandler(Exception)
     def handle_exception(e):
-        logger.exception("Unhandled exception on {} {}", app.debug, str(e))
+        logger.exception("Unhandled exception: {}", str(e))
         return jsonify({'message': 'Erreur interne du serveur'}), 500
 
     @app.errorhandler(404)
@@ -45,16 +50,25 @@ def create_app(create_tables=None):
     def handle_405(e):
         return jsonify({'message': 'Méthode non autorisée'}), 405
 
-    # Create DB tables
+    # DB tables
     if create_tables is None:
         create_tables = os.getenv('FLASK_CREATE_TABLES', 'false').lower() == 'true'
 
     if create_tables:
         with app.app_context():
+            # Import client models so SQLAlchemy registers them before create_all
+            import src.client_models  # noqa: F401
             try:
                 db.create_all()
                 logger.info("Database tables created successfully")
             except Exception as e:
                 logger.error("Could not create database tables: {}", e)
+
+            # Seed default roles
+            try:
+                seed_roles()
+                logger.info("Roles seeded")
+            except Exception as e:
+                logger.error("Could not seed roles: {}", e)
 
     return app
