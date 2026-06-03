@@ -86,8 +86,9 @@ def persist_message(sender_id, receiver_id, content_text):
 def deliver_message(message_id):
     """
     Called when the receiver has confirmed receipt of a message.
-    Writes the incoming copy to the receiver's SQLite DB, then deletes
-    the message from MySQL (server is relay only — no permanent storage).
+    Writes the incoming copy to the receiver's SQLite DB, then marks the
+    message as delivered on the server (Is_delivered=True) — logical deletion,
+    the row is kept for audit purposes but excluded from future pending queries.
     """
     msg = Message.query.get(message_id)
     if not msg:
@@ -98,9 +99,9 @@ def deliver_message(message_id):
     if sender:
         store_incoming(msg.id, sender, msg.Id_user_receiver, msg.Content, msg.Date)
 
-    db.session.delete(msg)
+    msg.Is_delivered = True
     db.session.commit()
-    logger.info("deliver_message: msg={} delivered and removed from server", message_id)
+    logger.info("deliver_message: msg={} marked as delivered on server", message_id)
 
 
 def get_pending_messages(user_id):

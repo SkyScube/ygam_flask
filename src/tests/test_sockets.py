@@ -95,17 +95,18 @@ class TestSendMessage:
         assert 'message_sent' in sent_names
         assert 'new_message' in recv_names
 
-    def test_send_message_removed_after_online_delivery(self, app, socket_client, socket_client_2, test_user, test_user_2):
-        """When receiver is connected, message is deleted from MySQL after delivery."""
+    def test_send_message_marked_delivered_after_online_delivery(self, app, socket_client, socket_client_2, test_user, test_user_2):
+        """When receiver is connected, message is marked Is_delivered=True in MySQL (logical deletion)."""
         socket_client.emit('send_message', {'to': test_user_2.id, 'content': 'relay test'})
 
         with app.app_context():
-            # Receiver was online → deliver_message() was called → MySQL row deleted
+            # Receiver was online → deliver_message() was called → row kept with Is_delivered=True
             msg = Message.query.filter_by(
                 Id_user_sender=test_user.id,
                 Id_user_receiver=test_user_2.id
             ).first()
-            assert msg is None
+            assert msg is not None
+            assert msg.Is_delivered is True
 
     def test_send_message_stored_in_sqlite_after_delivery(self, app, socket_client, socket_client_2, test_user, test_user_2):
         """Both sides (outgoing + incoming) must appear in SQLite after delivery."""
