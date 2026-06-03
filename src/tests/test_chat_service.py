@@ -1,7 +1,7 @@
 """Tests for chat service business logic."""
 import pytest
 from datetime import datetime
-from src.models import db, User, Message, Role
+from src.models import db, User, Message
 from src.services.chat_service import (
     get_conversations,
     get_message_history,

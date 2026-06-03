@@ -152,16 +152,10 @@ class TestSendMessage:
         assert 'new_message' not in sent_names
 
     def test_conversation_isolation(self, app, socket_client, socket_client_2, test_user, test_user_2):
-        """Messages between user1<->user2 don't leak to user3's room."""
-        from src.utils import generate_cuid
-        with app.app_context():
-            user3 = db.session.query(db.session.query.__self__.__class__).get(generate_cuid()) if False else None
-
-        # user3 socket
-        token3 = _make_access_token('fake_user_3_not_in_db')
-        # Just verify receiver_2 doesn't get unintended messages
+        """Messages sent to user2 are only received by user2."""
         socket_client_2.get_received()
         socket_client.emit('send_message', {'to': test_user_2.id, 'content': 'private'})
         recv = socket_client_2.get_received()
         msg_events = [e for e in recv if e['name'] == 'new_message']
-        assert all(e['args'][0]['receiver_id'] == test_user_2.id for e in msg_events)
+        assert len(msg_events) == 1
+        assert msg_events[0]['args'][0]['receiver_id'] == test_user_2.id

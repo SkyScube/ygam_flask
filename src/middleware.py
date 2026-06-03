@@ -83,13 +83,7 @@ def authenticate_and_refresh():
         except Exception as e:
             logger.warning("Token refresh failed: {}", e)
 
-    # Load user if we have a user_id
     if user_id:
-        token_record = get_token_record(refresh_token)
-
-        if not token_record:
-            return None
-
         request.current_user = get_user_by_id(user_id)
     else:
         request.current_user = None
