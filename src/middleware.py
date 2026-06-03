@@ -1,11 +1,12 @@
 import os
 
 import jwt
-from flask import request, current_app
+from flask import request
 from src.models import db, Token
 from datetime import datetime, timedelta
 
 from src.utils import get_user_by_id, hash_token
+from src.logger import logger
 
 
 def get_token_record(refresh_token):
@@ -50,7 +51,8 @@ def authenticate_and_refresh():
                 user_id = data['user_id']
         except jwt.ExpiredSignatureError:
             pass  # Will attempt refresh below
-        except jwt.InvalidTokenError:
+        except jwt.InvalidTokenError as e:
+            logger.warning("Invalid access token: {}", e)
             request.current_user = None
             return None
 
@@ -78,8 +80,8 @@ def authenticate_and_refresh():
                     # Update last_used
                     token_record.last_used = datetime.utcnow()
                     db.session.commit()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Token refresh failed: {}", e)
 
     # Load user if we have a user_id
     if user_id:
