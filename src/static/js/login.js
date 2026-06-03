@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 showAlert('Connexion réussie ! Redirection...', 'success');
                 setTimeout(() => {
-                    window.location.href = '/';
+                    window.location.href = '/chat';
                 }, 1000);
             } else {
                 showAlert(data.message || 'Identifiants incorrects', 'error');

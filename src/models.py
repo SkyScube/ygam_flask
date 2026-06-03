@@ -60,7 +60,7 @@ class Message(db.Model):
     id = db.Column(db.String(191), primary_key=True)
     Id_user_sender = db.Column(db.String(191), db.ForeignKey('User.id'), nullable=False)
     Id_user_receiver = db.Column(db.String(191), db.ForeignKey('User.id'), nullable=False)
-    Content = db.Column(db.LargeBinary, nullable=False)  # LongBlob - E2E encrypted content
+    Content = db.Column(db.Text, nullable=False)  # Plain text for POC (no E2E crypto)
     Is_delivered = db.Column(db.Boolean, default=False, nullable=False)
     Date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 

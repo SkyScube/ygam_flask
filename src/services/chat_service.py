@@ -41,7 +41,7 @@ def get_conversations(user):
         conversations.append({
             'contact_id': contact.id,
             'contact_username': contact.Username,
-            'last_message': last_msg.Content.decode('utf-8') if last_msg else '',
+            'last_message': last_msg.Content if last_msg else '',
             'last_message_date': last_msg.Date.isoformat() if last_msg else None,
         })
 
@@ -67,12 +67,12 @@ def get_message_history(user, other_user_id, limit=50):
 
 
 def persist_message(sender_id, receiver_id, content_text):
-    """Persists a plain-text message. Content stored as UTF-8 bytes (LargeBinary)."""
+    """Persists a plain-text message."""
     msg = Message(
         id=generate_cuid(),
         Id_user_sender=sender_id,
         Id_user_receiver=receiver_id,
-        Content=content_text.encode('utf-8'),
+        Content=content_text,
         Is_delivered=False,
         Date=datetime.utcnow(),
     )
@@ -103,7 +103,7 @@ def _serialize_message(msg):
         'id': msg.id,
         'sender_id': msg.Id_user_sender,
         'receiver_id': msg.Id_user_receiver,
-        'content': msg.Content.decode('utf-8'),
+        'content': msg.Content,
         'date': msg.Date.isoformat(),
         'is_delivered': msg.Is_delivered,
     }
