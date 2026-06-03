@@ -6,5 +6,4 @@ admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('panel')
 @admin_required
-def panel():
-
+def admin_panel():
